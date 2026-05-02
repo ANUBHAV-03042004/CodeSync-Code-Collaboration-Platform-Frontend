@@ -2,9 +2,11 @@ node_modules/
 dist/
 .angular/
 coverage/
+.gitignore
+# Never commit prod secrets — CI generates this file from GitHub Secrets
 src/environments/environment.prod.ts
+
 .vscode/
 .idea/
 .DS_Store
 Thumbs.db
-*.iml
