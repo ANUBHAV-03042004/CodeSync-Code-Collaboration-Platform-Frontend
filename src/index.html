@@ -1,0 +1,21 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>CodeSync – Collaborative Code Platform</title>
+  <base href="/">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#0f0f1a">
+  <link rel="icon" type="image/x-icon" href="favicon.ico">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <script>
+    // SockJS uses Node.js `global` — polyfill it for the browser
+    if (typeof global === 'undefined') { var global = globalThis; }
+    if (typeof process === 'undefined') { var process = { env: {} }; }
+  </script>
+</head>
+<body>
+  <app-root></app-root>
+</body>
+</html>
