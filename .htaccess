@@ -1,0 +1,48 @@
+# ── CodeSync Angular SPA — alwaysdata Apache Config ─────────────────────────
+
+Options -Indexes
+
+# ── SPA Fallback: send all unknown routes to index.html ─────────────────────
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+    RewriteBase /
+
+    # Skip real files and directories
+    RewriteCond %{REQUEST_FILENAME} !-f
+    RewriteCond %{REQUEST_FILENAME} !-d
+
+    # Everything else → index.html (Angular router handles it)
+    RewriteRule ^ index.html [L]
+</IfModule>
+
+# ── Security Headers ─────────────────────────────────────────────────────────
+<IfModule mod_headers.c>
+    Header always set X-Frame-Options "DENY"
+    Header always set X-Content-Type-Options "nosniff"
+    Header always set X-XSS-Protection "1; mode=block"
+    Header always set Referrer-Policy "strict-origin-when-cross-origin"
+    Header always set Permissions-Policy "camera=(), microphone=(), geolocation=()"
+</IfModule>
+
+# ── Cache static assets (hashed filenames) forever ──────────────────────────
+<IfModule mod_expires.c>
+    ExpiresActive On
+
+    # HTML — never cache (always fresh)
+    <FilesMatch "\.(html)$">
+        ExpiresDefault "access plus 0 seconds"
+        Header set Cache-Control "no-cache, no-store, must-revalidate"
+    </FilesMatch>
+
+    # Hashed JS/CSS — cache 1 year (Angular adds hash to filenames)
+    <FilesMatch "\.(js|css|woff2|woff|ttf|eot|ico|svg|png|jpg|jpeg|gif|webp)$">
+        ExpiresDefault "access plus 1 year"
+        Header set Cache-Control "public, max-age=31536000, immutable"
+    </FilesMatch>
+</IfModule>
+
+# ── Gzip compression ─────────────────────────────────────────────────────────
+<IfModule mod_deflate.c>
+    AddOutputFilterByType DEFLATE text/html text/css application/javascript
+    AddOutputFilterByType DEFLATE application/json image/svg+xml
+</IfModule>
