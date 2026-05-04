@@ -57,7 +57,7 @@ jobs:
         run: |
           python3 - << 'PYEOF'
           import os
-          api_base = os.environ['API_BASE']
+          api_base  = os.environ['API_BASE']
           ws_collab = os.environ['WS_COLLAB']
           ws_notif  = os.environ['WS_NOTIF']
           ws_exec   = os.environ['WS_EXEC']
@@ -71,23 +71,19 @@ jobs:
           """
           with open('src/environments/environment.prod.ts', 'w') as f:
               f.write(content)
-          print("=== Verifying environment.prod.ts ===")
-          # Print with placeholders to avoid masking confusion
           print(f"apiBase length: {len(api_base)} chars")
           print(f"wsCollabEndpoint length: {len(ws_collab)} chars")
           print(f"wsNotifEndpoint length: {len(ws_notif)} chars")
           print(f"wsExecEndpoint length: {len(ws_exec)} chars")
-          with open('src/environments/environment.prod.ts', 'r') as f:
-              print(f.read())
           PYEOF
 
       - name: Build Angular (production)
         run: npm run build -- --configuration=production
 
       - name: Deploy to Netlify
-        uses: netlify/actions/cli@master
-        with:
-          args: deploy --dir=dist/codesync-frontend/browser --prod --message "Deploy from GitHub Actions — ${{ github.sha }}"
+        run: |
+          npm install -g netlify-cli
+          netlify deploy --dir=dist/codesync-frontend/browser --prod --message "Deploy from GitHub Actions — ${{ github.sha }}"
         env:
           NETLIFY_AUTH_TOKEN: ${{ secrets.NETLIFY_AUTH_TOKEN }}
           NETLIFY_SITE_ID: ${{ secrets.NETLIFY_SITE_ID }}
