@@ -23,7 +23,7 @@ import { gsap } from 'gsap';
         <span class="ht-line ht-green" #tl3>SHIP FASTER.</span>
       </h1>
       <p class="hero-body" #hbodyRef>
-        CodeSync lets teams write, run, and review code in the same editor — simultaneously.
+        YoursCode lets teams write, run, and review code in the same editor — simultaneously.
         Real-time cursors, instant execution, and built-in version history.
       </p>
       <div class="hero-cta" #ctaRef>
@@ -56,7 +56,7 @@ import { gsap } from 'gsap';
           <div class="cw-dot cw-red"></div>
           <div class="cw-dot cw-yellow"></div>
           <div class="cw-dot cw-green"></div>
-          <span class="cw-title mono">main.py — CodeSync</span>
+          <span class="cw-title mono">main.py — YoursCode</span>
         </div>
         <div class="cw-body">
           <div class="code-line" *ngFor="let l of codeLines; let i = index">
@@ -138,7 +138,7 @@ import { gsap } from 'gsap';
   <footer class="footer">
     <div class="footer-brand">
       <div class="footer-bolt">⚡</div>
-      <span class="footer-name bb">CODESYNC</span>
+      <span class="footer-name bb">YoursCode</span>
     </div>
     <div class="footer-links">
       <a routerLink="/login"     class="fl">Sign In</a>
@@ -146,7 +146,7 @@ import { gsap } from 'gsap';
       <a routerLink="/dashboard" class="fl">Dashboard</a>
       <a routerLink="/projects"  class="fl">Projects</a>
     </div>
-    <div class="footer-copy mono">© 2026 CodeSync. Built for developers.</div>
+    <div class="footer-copy mono">© 2026 YoursCode. Built for developers.</div>
   </footer>
 
 </div>
@@ -361,7 +361,7 @@ export class HomeComponent implements AfterViewInit {
 
   private router = inject(Router);
 
-  ticks = ['CODESYNC','COLLABORATE','REAL-TIME EDITOR','INSTANT EXECUTION','VERSION HISTORY','COMMENT ANYWHERE','TEAM COLLAB','OPEN SOURCE'];
+  ticks = ['YoursCode','COLLABORATE','REAL-TIME EDITOR','INSTANT EXECUTION','VERSION HISTORY','COMMENT ANYWHERE','TEAM COLLAB','OPEN SOURCE'];
   langTicks = ['Python','Java','TypeScript','JavaScript','Go','Rust','C++','Kotlin','Swift','Ruby','PHP','C#'];
 
   codeLines = [
