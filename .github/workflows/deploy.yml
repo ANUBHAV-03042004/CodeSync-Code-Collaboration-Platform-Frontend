@@ -1,88 +1,69 @@
-name: Build & Deploy to Netlify
+name: CI / CD — Test → Build → Deploy
 
 on:
   push:
-    branches: [main, master]
+    branches: [main]
   pull_request:
-    branches: [main, master]
-  workflow_dispatch:
+    branches: [main]
 
 jobs:
+  # ── Job 1: Run Jest Tests ──────────────────────────────────────────────────
   test:
     name: Run Jest Tests
     runs-on: ubuntu-latest
+
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node 18
+        uses: actions/setup-node@v4
         with:
           node-version: '18'
           cache: 'npm'
-      - run: npm ci
-      - run: npm test -- --passWithNoTests --forceExit
 
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run tests
+        run: npm test -- --forceExit --passWithNoTests --ci
+
+  # ── Job 2: Build & Deploy (only on push to main, only if tests pass) ───────
   deploy:
-    name: Build & Deploy
-    runs-on: ubuntu-latest
+    name: Build & Deploy to Netlify
     needs: test
-    steps:
-      - uses: actions/checkout@v4
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
 
-      - uses: actions/setup-node@v4
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node 18
+        uses: actions/setup-node@v4
         with:
           node-version: '18'
           cache: 'npm'
 
-      - run: npm ci
+      - name: Install dependencies
+        run: npm ci
 
-      # ── Generate environment.prod.ts from secrets (file is gitignored) ──
-      - name: Generate environment.prod.ts
+      - name: Inject API URLs into environment.prod.ts
         run: |
-          mkdir -p src/environments
-          cat > src/environments/environment.prod.ts << ENVEOF
-          export const environment = {
-            production: true,
-            apiBase: '${{ secrets.ANGULAR_API_BASE }}',
-            wsCollabEndpoint: '${{ secrets.ANGULAR_WS_COLLAB }}',
-            wsNotificationEndpoint: '${{ secrets.ANGULAR_WS_NOTIF }}',
-            wsExecutionEndpoint: '${{ secrets.ANGULAR_WS_EXEC }}'
-          };
-          ENVEOF
+          printf 'export const environment = {\n  production: true,\n  apiBase: "%s",\n  wsCollabEndpoint: "%s",\n  wsNotificationEndpoint: "%s",\n  wsExecutionEndpoint: "%s"\n};\n' \
+            "${{ secrets.ANGULAR_API_BASE }}" \
+            "${{ secrets.ANGULAR_WS_COLLAB }}" \
+            "${{ secrets.ANGULAR_WS_NOTIF }}" \
+            "${{ secrets.ANGULAR_WS_EXEC }}" \
+            > src/environments/environment.prod.ts
 
-      - name: Build — Production
-        if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
+      - name: Build Angular (production)
         run: npm run build -- --configuration=production
 
-      - name: Build — Preview (PR)
-        if: github.event_name == 'pull_request'
-        run: npm run build -- --configuration=production
-
-      - name: Deploy to Netlify (Production)
-        if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
-        uses: nwtgck/actions-netlify@v3.0
+      - name: Deploy to Netlify
+        uses: netlify/actions/cli@master
         with:
-          publish-dir: './dist/codesync-frontend/browser'
-          production-branch: main
-          production-deploy: true
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-          deploy-message: "Deploy ${{ github.sha }}"
-          enable-pull-request-comment: true
-          enable-commit-comment: true
+          args: deploy --dir=dist/codesync-frontend/browser --prod --message "Deploy from GitHub Actions — ${{ github.sha }}"
         env:
           NETLIFY_AUTH_TOKEN: ${{ secrets.NETLIFY_AUTH_TOKEN }}
-          NETLIFY_SITE_ID:    ${{ secrets.NETLIFY_SITE_ID }}
-        timeout-minutes: 10
-
-      - name: Deploy to Netlify (Preview)
-        if: github.event_name == 'pull_request'
-        uses: nwtgck/actions-netlify@v3.0
-        with:
-          publish-dir: './dist/codesync-frontend/browser'
-          production-deploy: false
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-          deploy-message: "Preview PR #${{ github.event.number }}"
-          enable-pull-request-comment: true
-          enable-commit-comment: false
-        env:
-          NETLIFY_AUTH_TOKEN: ${{ secrets.NETLIFY_AUTH_TOKEN }}
-          NETLIFY_SITE_ID:    ${{ secrets.NETLIFY_SITE_ID }}
-        timeout-minutes: 10
+          NETLIFY_SITE_ID: ${{ secrets.NETLIFY_SITE_ID }}
