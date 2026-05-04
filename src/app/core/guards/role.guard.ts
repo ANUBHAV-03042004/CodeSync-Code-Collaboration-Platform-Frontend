@@ -1,6 +1,6 @@
 import { inject } from '@angular/core';
 import { CanActivateFn, Router } from '@angular/router';
-
+// role
 function decodeJwtPayload(token: string): any {
   try {
     return JSON.parse(atob(token.split('.')[1]));
