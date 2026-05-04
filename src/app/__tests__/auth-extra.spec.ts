@@ -11,6 +11,15 @@ import {
 import { AuthService } from '../services/auth.service';
 import { ToastService } from '../shared/components/toast/toast.service';
 
+jest.mock('gsap', () => {
+  const chain: any = {};
+  chain.fromTo = jest.fn().mockReturnValue(chain);
+  chain.to = jest.fn().mockReturnValue(chain);
+  const gspInstance = { fromTo: jest.fn(), to: jest.fn(), timeline: jest.fn(() => chain) };
+  // Support both: import gsap from 'gsap'  AND  import { gsap } from 'gsap'
+  return { ...gspInstance, gsap: gspInstance, default: gspInstance };
+});
+
 const createAuthMock = () => ({
   forgotPassword: jest.fn().mockReturnValue(of({})),
   validateResetToken: jest.fn().mockReturnValue(of({ valid: true, message: 'ok' })),
@@ -22,69 +31,60 @@ const createToastMock = () => ({
   success: jest.fn(), error: jest.fn(), info: jest.fn(), warn: jest.fn(), toast$: of()
 });
 
-// ── Oauth2CallbackComponent ───────────────────────────────────────────────────
+const makeJwt = (payload: object) => `header.${btoa(JSON.stringify(payload))}.sig`;
+
+// ── Oauth2CallbackComponent ────────────────────────────────────────────────────
 describe('Oauth2CallbackComponent', () => {
-  let component: Oauth2CallbackComponent;
-  let fixture: ComponentFixture<Oauth2CallbackComponent>;
   let router: Router;
 
-  const makeJwt = (payload: object) =>
-    `header.${btoa(JSON.stringify(payload))}.sig`;
-
-  beforeEach(async () => {
+  // Shared setup with a valid token
+  const setupWith = async (tokenValue: string | null) => {
+    // FIX: always call TestBed.resetTestingModule() before reconfiguring
+    await TestBed.resetTestingModule();
     await TestBed.configureTestingModule({
       imports: [Oauth2CallbackComponent, RouterTestingModule],
       providers: [
         {
           provide: ActivatedRoute,
-          useValue: {
-            snapshot: { queryParamMap: { get: (k: string) => k === 'token' ? makeJwt({ sub: 'user@test.com', role: 'USER' }) : null } }
-          }
+          useValue: { snapshot: { queryParamMap: { get: (k: string) => k === 'token' ? tokenValue : null } } }
         }
       ]
     }).compileComponents();
-
-    fixture = TestBed.createComponent(Oauth2CallbackComponent);
-    component = fixture.componentInstance;
+    const fixture = TestBed.createComponent(Oauth2CallbackComponent);
     router = TestBed.inject(Router);
     localStorage.clear();
-  });
+    return fixture;
+  };
 
   afterEach(() => localStorage.clear());
 
-  it('should create', () => expect(component).toBeTruthy());
+  it('should create', async () => {
+    const fixture = await setupWith(makeJwt({ sub: 'user@test.com', role: 'USER' }));
+    expect(fixture.componentInstance).toBeTruthy();
+  });
 
-  it('should store token in localStorage when token is present', () => {
+  it('should store token in localStorage when token is present', async () => {
+    const fixture = await setupWith(makeJwt({ sub: 'user@test.com', role: 'USER' }));
     fixture.detectChanges();
     expect(localStorage.getItem('access_token')).toBeTruthy();
   });
 
-  it('should navigate to /dashboard on success', () => {
+  it('should navigate to /dashboard on success', async () => {
+    const fixture = await setupWith(makeJwt({ sub: 'user@test.com', role: 'USER' }));
     const spy = jest.spyOn(router, 'navigate');
     fixture.detectChanges();
     expect(spy).toHaveBeenCalledWith(['/dashboard']);
   });
 
   it('should navigate to /login with error when no token', async () => {
-    await TestBed.configureTestingModule({
-      imports: [Oauth2CallbackComponent, RouterTestingModule],
-      providers: [
-        {
-          provide: ActivatedRoute,
-          useValue: { snapshot: { queryParamMap: { get: () => null } } }
-        }
-      ]
-    }).compileComponents();
-
-    const f2 = TestBed.createComponent(Oauth2CallbackComponent);
-    const r2 = TestBed.inject(Router);
-    const spy = jest.spyOn(r2, 'navigate');
-    f2.detectChanges();
+    const fixture = await setupWith(null);
+    const spy = jest.spyOn(router, 'navigate');
+    fixture.detectChanges();
     expect(spy).toHaveBeenCalledWith(['/login'], { queryParams: { error: 'oauth_failed' } });
   });
 });
 
-// ── ForgotPasswordComponent ───────────────────────────────────────────────────
+// ── ForgotPasswordComponent ────────────────────────────────────────────────────
 describe('ForgotPasswordComponent', () => {
   let component: ForgotPasswordComponent;
   let fixture: ComponentFixture<ForgotPasswordComponent>;
@@ -157,13 +157,31 @@ describe('ForgotPasswordComponent', () => {
   });
 });
 
-// ── ResetPasswordComponent ────────────────────────────────────────────────────
+// ── ResetPasswordComponent ─────────────────────────────────────────────────────
 describe('ResetPasswordComponent', () => {
   let component: ResetPasswordComponent;
   let fixture: ComponentFixture<ResetPasswordComponent>;
   let authSvc: ReturnType<typeof createAuthMock>;
   let toastSvc: ReturnType<typeof createToastMock>;
   let router: Router;
+
+  // FIX: helper that fully resets TestBed before each variant test
+  const setupWith = async (tokenValue: string | null, authOverride?: Partial<ReturnType<typeof createAuthMock>>) => {
+    const auth = { ...createAuthMock(), ...authOverride };
+    const toast = createToastMock();
+    await TestBed.resetTestingModule();
+    await TestBed.configureTestingModule({
+      imports: [ResetPasswordComponent, RouterTestingModule, ReactiveFormsModule],
+      providers: [
+        { provide: AuthService, useValue: auth },
+        { provide: ToastService, useValue: toast },
+        { provide: ActivatedRoute, useValue: { snapshot: { queryParamMap: { get: () => tokenValue } } } }
+      ]
+    }).compileComponents();
+    const f = TestBed.createComponent(ResetPasswordComponent);
+    f.detectChanges();
+    return { fixture: f, component: f.componentInstance, router: TestBed.inject(Router), auth, toast };
+  };
 
   beforeEach(async () => {
     authSvc = createAuthMock();
@@ -198,20 +216,10 @@ describe('ResetPasswordComponent', () => {
   });
 
   it('should set tokenValid=false on invalid token', async () => {
-    authSvc.validateResetToken.mockReturnValue(throwError(() => new Error()));
-
-    await TestBed.configureTestingModule({
-      imports: [ResetPasswordComponent, RouterTestingModule],
-      providers: [
-        { provide: AuthService, useValue: authSvc },
-        { provide: ToastService, useValue: toastSvc },
-        { provide: ActivatedRoute, useValue: { snapshot: { queryParamMap: { get: () => 'bad-token' } } } }
-      ]
-    }).compileComponents();
-
-    const f2 = TestBed.createComponent(ResetPasswordComponent);
-    f2.detectChanges();
-    expect(f2.componentInstance.tokenValid).toBe(false);
+    const { component: c } = await setupWith('bad-token', {
+      validateResetToken: jest.fn().mockReturnValue(throwError(() => new Error()))
+    });
+    expect(c.tokenValid).toBe(false);
   });
 
   it('should have invalid form with short password', () => {
@@ -246,16 +254,7 @@ describe('ResetPasswordComponent', () => {
   });
 
   it('should set tokenValid=false when no token in query', async () => {
-    await TestBed.configureTestingModule({
-      imports: [ResetPasswordComponent, RouterTestingModule],
-      providers: [
-        { provide: AuthService, useValue: authSvc },
-        { provide: ToastService, useValue: toastSvc },
-        { provide: ActivatedRoute, useValue: { snapshot: { queryParamMap: { get: () => null } } } }
-      ]
-    }).compileComponents();
-    const f3 = TestBed.createComponent(ResetPasswordComponent);
-    f3.detectChanges();
-    expect(f3.componentInstance.tokenValid).toBe(false);
+    const { component: c } = await setupWith(null);
+    expect(c.tokenValid).toBe(false);
   });
 });

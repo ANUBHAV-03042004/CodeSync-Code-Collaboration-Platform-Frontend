@@ -1,18 +1,18 @@
 import { TestBed } from '@angular/core/testing';
 import { Router } from '@angular/router';
-import { HttpClientTestingModule, HttpTestingController } from '@angular/common/http/testing';
 import { HttpClient, provideHttpClient, withInterceptors } from '@angular/common/http';
+import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { provideRouter } from '@angular/router';
 import { authGuard } from '../../core/guards/auth.guard';
 import { roleGuard } from '../../core/guards/role.guard';
 import { authInterceptor } from '../../core/interceptors/auth.interceptor';
 
-// ── Mock activation context ───────────────────────────────────────────────────
+// ── Mock activation context helper ────────────────────────────────────────────
 function runGuard(guard: any): boolean | any {
   return TestBed.runInInjectionContext(() => guard({} as any, {} as any));
 }
 
-// ── AuthGuard ─────────────────────────────────────────────────────────────────
+// ── AuthGuard ──────────────────────────────────────────────────────────────────
 describe('authGuard', () => {
   let router: Router;
 
@@ -39,15 +39,14 @@ describe('authGuard', () => {
   });
 });
 
-// ── RoleGuard ─────────────────────────────────────────────────────────────────
+// ── RoleGuard ──────────────────────────────────────────────────────────────────
 describe('roleGuard', () => {
   let router: Router;
 
-  // Helper to generate a fake JWT with a given role
-  function makeToken(role: string): string {
+  const makeToken = (role: string): string => {
     const payload = btoa(JSON.stringify({ sub: 'user@test.com', role }));
     return `header.${payload}.signature`;
-  }
+  };
 
   beforeEach(() => {
     TestBed.configureTestingModule({
@@ -80,7 +79,7 @@ describe('roleGuard', () => {
   });
 });
 
-// ── AuthInterceptor ───────────────────────────────────────────────────────────
+// ── AuthInterceptor ────────────────────────────────────────────────────────────
 describe('authInterceptor', () => {
   let http: HttpClient;
   let controller: HttpTestingController;
@@ -88,7 +87,11 @@ describe('authInterceptor', () => {
   beforeEach(() => {
     TestBed.configureTestingModule({
       providers: [
+        // FIX: provideHttpClientTesting must be paired with provideHttpClient.
+        // Using HttpClientTestingModule alone doesn't register HttpTestingController
+        // when the interceptor is registered via provideHttpClient(withInterceptors([...])).
         provideHttpClient(withInterceptors([authInterceptor])),
+        provideHttpClientTesting(),
         provideRouter([{ path: 'login', component: class {} as any }])
       ]
     });
