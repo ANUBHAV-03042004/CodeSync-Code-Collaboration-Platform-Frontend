@@ -3,7 +3,17 @@
 [build]
   publish = "dist/codesync-frontend/browser"
 
-# ── SPA fallback ─────────────────────────────────────────────────────────────
+# ── OAuth2 callback — must come BEFORE the SPA wildcard ──────────────────────
+# This serves index.html for /oauth2/callback WITHOUT a server-side redirect.
+# A redirect would strip the #fragment (token), breaking OAuth login.
+# status=200 means "rewrite silently" — the URL stays as /oauth2/callback
+# and Angular reads window.location.hash to get the token.
+[[redirects]]
+  from   = "/oauth2/callback"
+  to     = "/index.html"
+  status = 200
+
+# ── SPA fallback (all other routes) ──────────────────────────────────────────
 [[redirects]]
   from   = "/*"
   to     = "/index.html"
