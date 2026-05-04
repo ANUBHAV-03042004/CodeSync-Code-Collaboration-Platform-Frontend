@@ -16,7 +16,6 @@ jest.mock('gsap', () => {
   chain.fromTo = jest.fn().mockReturnValue(chain);
   chain.to = jest.fn().mockReturnValue(chain);
   const gspInstance = { fromTo: jest.fn(), to: jest.fn(), timeline: jest.fn(() => chain) };
-  // Support both: import gsap from 'gsap'  AND  import { gsap } from 'gsap'
   return { ...gspInstance, gsap: gspInstance, default: gspInstance };
 });
 
@@ -37,26 +36,49 @@ const makeJwt = (payload: object) => `header.${btoa(JSON.stringify(payload))}.si
 describe('Oauth2CallbackComponent', () => {
   let router: Router;
 
-  // Shared setup with a valid token
+  // Sets window.location.hash to simulate the fragment the backend sends:
+  //   /oauth2/callback#token=xxx&refreshToken=yyy
   const setupWith = async (tokenValue: string | null) => {
-    // FIX: always call TestBed.resetTestingModule() before reconfiguring
     await TestBed.resetTestingModule();
+
+    // Set the URL fragment BEFORE the component initialises
+    if (tokenValue) {
+      Object.defineProperty(window, 'location', {
+        value: { ...window.location, hash: `#token=${tokenValue}&refreshToken=refresh-token` },
+        writable: true
+      });
+    } else {
+      Object.defineProperty(window, 'location', {
+        value: { ...window.location, hash: '' },
+        writable: true
+      });
+    }
+
     await TestBed.configureTestingModule({
       imports: [Oauth2CallbackComponent, RouterTestingModule],
+      // ActivatedRoute still needed for the component import, but not used for token anymore
       providers: [
         {
           provide: ActivatedRoute,
-          useValue: { snapshot: { queryParamMap: { get: (k: string) => k === 'token' ? tokenValue : null } } }
+          useValue: { snapshot: { queryParamMap: { get: () => null } } }
         }
       ]
     }).compileComponents();
+
     const fixture = TestBed.createComponent(Oauth2CallbackComponent);
     router = TestBed.inject(Router);
     localStorage.clear();
     return fixture;
   };
 
-  afterEach(() => localStorage.clear());
+  afterEach(() => {
+    localStorage.clear();
+    // Reset hash after each test
+    Object.defineProperty(window, 'location', {
+      value: { ...window.location, hash: '' },
+      writable: true
+    });
+  });
 
   it('should create', async () => {
     const fixture = await setupWith(makeJwt({ sub: 'user@test.com', role: 'USER' }));
@@ -165,7 +187,6 @@ describe('ResetPasswordComponent', () => {
   let toastSvc: ReturnType<typeof createToastMock>;
   let router: Router;
 
-  // FIX: helper that fully resets TestBed before each variant test
   const setupWith = async (tokenValue: string | null, authOverride?: Partial<ReturnType<typeof createAuthMock>>) => {
     const auth = { ...createAuthMock(), ...authOverride };
     const toast = createToastMock();
