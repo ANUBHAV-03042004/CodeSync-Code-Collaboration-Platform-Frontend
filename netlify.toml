@@ -1,5 +1,8 @@
+# Build is handled by GitHub Actions (.github/workflows/deploy.yml)
+# Netlify only serves the pre-built files from dist/codesync-frontend/browser
 [build]
   publish = "dist/codesync-frontend/browser"
+
 # ── SPA fallback ─────────────────────────────────────────────────────────────
 [[redirects]]
   from   = "/*"
