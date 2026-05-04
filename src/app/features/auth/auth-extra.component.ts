@@ -44,18 +44,35 @@ const CARD_STYLES = [`
     .oauth-label{font-size:24px;letter-spacing:.08em;color:rgba(255,255,240,.5)}`]
 })
 export class Oauth2CallbackComponent implements OnInit {
-  private route = inject(ActivatedRoute);
+  // ActivatedRoute not needed anymore — token is in the URL fragment (#), not query params
   private router = inject(Router);
+
   ngOnInit(): void {
-    const token = this.route.snapshot.queryParamMap.get('token');
+    // Backend sends: /oauth2/callback#token=xxx&refreshToken=yyy
+    // window.location.hash gives us "#token=xxx&refreshToken=yyy"
+    const fragment = window.location.hash; // e.g. "#token=eyJ...&refreshToken=eyJ..."
+    const params = new URLSearchParams(fragment.startsWith('#') ? fragment.substring(1) : fragment);
+
+    const token        = params.get('token');
+    const refreshToken = params.get('refreshToken');
+
     if (token) {
       localStorage.setItem('access_token', token);
+      if (refreshToken) {
+        localStorage.setItem('refresh_token', refreshToken);
+      }
       try {
         const payload = JSON.parse(atob(token.split('.')[1]));
-        if (payload.sub) localStorage.setItem('user', JSON.stringify({ email: payload.sub, role: payload.role }));
-      } catch {}
+        if (payload.sub) {
+          localStorage.setItem('user', JSON.stringify({
+            email: payload.sub,
+            role: payload.role
+          }));
+        }
+      } catch { /* malformed JWT — still proceed, profile will load from API */ }
       this.router.navigate(['/dashboard']);
     } else {
+      // No token in fragment — OAuth failed or user cancelled
       this.router.navigate(['/login'], { queryParams: { error: 'oauth_failed' } });
     }
   }
@@ -534,58 +551,47 @@ export class ForgotPasswordComponent implements AfterViewInit {
   ngAfterViewInit(): void {
     const tl = gsap.timeline({ defaults: { ease: 'power3.out' } });
 
-    // Left panel: title lines slam in from left
     tl.fromTo(
       this.fpLeft.nativeElement.querySelectorAll('.fbt-line'),
       { x: -70, opacity: 0 },
       { x: 0, opacity: 1, duration: 0.55, stagger: 0.1 }
     )
-    // Label strip scales in
     .fromTo(
       this.fpLeft.nativeElement.querySelector('.fp-label-strip'),
       { scaleX: 0, transformOrigin: 'left center' },
       { scaleX: 1, duration: 0.4 }, '-=0.4'
     )
-    // Tagline fades up
     .fromTo(this.fpTagline.nativeElement,
       { y: 18, opacity: 0 }, { y: 0, opacity: 1, duration: 0.4 }, '-=0.1'
     )
-    // Steps pop in staggered
     .fromTo(
       this.fpSteps.nativeElement.querySelectorAll('.fp-step, .fp-step-arrow'),
       { y: 16, opacity: 0 },
       { y: 0, opacity: 1, duration: 0.35, stagger: 0.06 }, '-=0.1'
     )
-    // Color bar scales in
     .fromTo(this.fpBar.nativeElement,
       { scaleX: 0, transformOrigin: 'left' },
       { scaleX: 1, duration: 0.45 }, '-=0.15'
     )
-    // Right: back link
     .fromTo(this.fpBack.nativeElement,
       { y: -12, opacity: 0 }, { y: 0, opacity: 1, duration: 0.3 }, '-=0.5'
     )
-    // Brand drops in
     .fromTo(this.fpBrand.nativeElement,
       { y: -10, opacity: 0 }, { y: 0, opacity: 1, duration: 0.35 }, '-=0.2'
     )
-    // Card bounces in
     .fromTo(this.fpCard.nativeElement,
       { y: 40, opacity: 0, scale: 0.97 },
       { y: 0, opacity: 1, scale: 1, duration: 0.5, ease: 'back.out(1.4)' }, '-=0.1'
     )
-    // Field + button stagger
     .fromTo(
       [this.fpField?.nativeElement, this.fpSubmit?.nativeElement],
       { x: 16, opacity: 0 },
       { x: 0, opacity: 1, duration: 0.35, stagger: 0.08 }, '-=0.25'
     )
-    // Note slides up
     .fromTo(this.fpNote.nativeElement,
       { y: 10, opacity: 0 }, { y: 0, opacity: 1, duration: 0.3 }, '-=0.1'
     );
 
-    // Continuous subtle float on the color bar
     gsap.to(this.fpBar.nativeElement, {
       y: -5, duration: 2, repeat: -1, yoyo: true, ease: 'sine.inOut', delay: 1
     });
@@ -593,12 +599,7 @@ export class ForgotPasswordComponent implements AfterViewInit {
 
   onSubmit(): void {
     if (this.form.invalid) {
-      // Shake the input wrap
-      gsap.fromTo(
-        '.fp-input-wrap',
-        { x: -7 },
-        { x: 0, duration: 0.5, ease: 'elastic.out(1, 0.3)' }
-      );
+      gsap.fromTo('.fp-input-wrap', { x: -7 }, { x: 0, duration: 0.5, ease: 'elastic.out(1, 0.3)' });
       this.form.markAllAsTouched();
       return;
     }
@@ -613,11 +614,7 @@ export class ForgotPasswordComponent implements AfterViewInit {
       error: () => {
         this.loading = false;
         this.toast.error('Could not send reset link.');
-        gsap.fromTo(
-          this.fpCard.nativeElement,
-          { x: -8 },
-          { x: 0, duration: 0.5, ease: 'elastic.out(1, 0.3)' }
-        );
+        gsap.fromTo(this.fpCard.nativeElement, { x: -8 }, { x: 0, duration: 0.5, ease: 'elastic.out(1, 0.3)' });
       }
     });
   }
