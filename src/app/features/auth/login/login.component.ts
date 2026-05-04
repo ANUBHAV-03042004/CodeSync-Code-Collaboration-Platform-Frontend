@@ -120,8 +120,9 @@ export class LoginComponent implements OnInit, AfterViewInit {
 
   form!: FormGroup;
   loading = false;
-  githubOAuthUrl = `${(globalThis as any).location?.origin || 'http://localhost:8080'}/oauth2/authorization/github`;
-  googleOAuthUrl = `${(globalThis as any).location?.origin || 'http://localhost:8080'}/oauth2/authorization/google`;
+  // OAuth2 → gateway route: /oauth2/authorization/* → auth-service (auth-oauth2 route)
+  get githubOAuthUrl(): string { return this.auth.githubOAuthUrl; }
+  get googleOAuthUrl(): string  { return this.auth.googleOAuthUrl; }
 
   ngOnInit(): void {
     this.form = this.fb.group({
