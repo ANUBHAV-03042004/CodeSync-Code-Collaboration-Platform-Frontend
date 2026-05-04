@@ -62,7 +62,7 @@ export class ToastComponent implements OnInit, OnDestroy {
   }
 
   iconFor(type: string): string {
-    return { success: '✔', error: '✖', info: '⚡', warn: '⚠' }[type] || '!';
+    return { success: '✅', error: '❌', info: 'ℹ️', warn: '⚠️' }[type] || '🔔';
   }
   trackById(_: number, t: ToastItem): number { return t.id; }
   ngOnDestroy(): void { this.sub?.unsubscribe(); }
