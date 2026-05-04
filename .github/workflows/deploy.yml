@@ -55,17 +55,31 @@ jobs:
           WS_NOTIF: ${{ secrets.ANGULAR_WS_NOTIF }}
           WS_EXEC: ${{ secrets.ANGULAR_WS_EXEC }}
         run: |
-          {
-            echo "export const environment = {"
-            echo "  production: true,"
-            echo "  apiBase:                '${API_BASE}',"
-            echo "  wsCollabEndpoint:       '${WS_COLLAB}',"
-            echo "  wsNotificationEndpoint: '${WS_NOTIF}',"
-            echo "  wsExecutionEndpoint:    '${WS_EXEC}'"
-            echo "};"
-          } > src/environments/environment.prod.ts
-          echo "=== Verifying environment.prod.ts ==="
-          cat src/environments/environment.prod.ts
+          python3 - << 'PYEOF'
+          import os
+          api_base = os.environ['API_BASE']
+          ws_collab = os.environ['WS_COLLAB']
+          ws_notif  = os.environ['WS_NOTIF']
+          ws_exec   = os.environ['WS_EXEC']
+          content = f"""export const environment = {{
+            production: true,
+            apiBase:                '{api_base}',
+            wsCollabEndpoint:       '{ws_collab}',
+            wsNotificationEndpoint: '{ws_notif}',
+            wsExecutionEndpoint:    '{ws_exec}'
+          }};
+          """
+          with open('src/environments/environment.prod.ts', 'w') as f:
+              f.write(content)
+          print("=== Verifying environment.prod.ts ===")
+          # Print with placeholders to avoid masking confusion
+          print(f"apiBase length: {len(api_base)} chars")
+          print(f"wsCollabEndpoint length: {len(ws_collab)} chars")
+          print(f"wsNotifEndpoint length: {len(ws_notif)} chars")
+          print(f"wsExecEndpoint length: {len(ws_exec)} chars")
+          with open('src/environments/environment.prod.ts', 'r') as f:
+              print(f.read())
+          PYEOF
 
       - name: Build Angular (production)
         run: npm run build -- --configuration=production
