@@ -566,7 +566,7 @@ export class RegisterComponent implements OnInit, AfterViewInit {
   pwLabel  = '';
 
   tickerWords = [
-    'CODESYNC', 'COLLABORATE', 'BUILD TOGETHER', 'REAL-TIME CODE',
+    'YoursCode', 'COLLABORATE', 'BUILD TOGETHER', 'REAL-TIME CODE',
     'SHIP FASTER', 'JOIN NOW', 'FREE TO START', 'OPEN SOURCE'
   ];
 
