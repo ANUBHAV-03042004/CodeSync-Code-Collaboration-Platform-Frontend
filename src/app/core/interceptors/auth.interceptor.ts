@@ -1,12 +1,12 @@
 import { HttpInterceptorFn } from '@angular/common/http';
 import { inject } from '@angular/core';
-import { Router, NavigationStart } from '@angular/router';
+import { Router, NavigationEnd, NavigationCancel, NavigationError } from '@angular/router';
 import { catchError, throwError } from 'rxjs';
 import { filter, take } from 'rxjs/operators';
 
 export const authInterceptor: HttpInterceptorFn = (req, next) => {
   const router = inject(Router);
-  const token = localStorage.getItem('access_token');
+  const token  = localStorage.getItem('access_token');
 
   const authReq = token
     ? req.clone({ setHeaders: { Authorization: `Bearer ${token}` } })
@@ -19,13 +19,16 @@ export const authInterceptor: HttpInterceptorFn = (req, next) => {
         localStorage.removeItem('refresh_token');
         localStorage.removeItem('user');
 
-        // Wait for any in-progress navigation to finish before redirecting.
-        // This prevents the InvalidStateError caused by two concurrent navigations.
         const nav = router.getCurrentNavigation();
         if (nav) {
-          // A navigation is already in progress — wait for it to complete first
+          // FIX: was NavigationStart — that fires at the START of the NEXT navigation,
+          // meaning the /login redirect silently never fired while a navigation was active.
+          // NavigationEnd | NavigationCancel | NavigationError waits for the CURRENT
+          // navigation to finish before redirecting.
           router.events.pipe(
-            filter(e => e instanceof NavigationStart),
+            filter(e => e instanceof NavigationEnd
+                     || e instanceof NavigationCancel
+                     || e instanceof NavigationError),
             take(1)
           ).subscribe(() => router.navigate(['/login']));
         } else {
