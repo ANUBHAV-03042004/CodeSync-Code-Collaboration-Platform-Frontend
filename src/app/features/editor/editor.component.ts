@@ -256,10 +256,14 @@ export class EditorComponent implements OnInit, OnDestroy, AfterViewInit {
   }
 
   ngAfterViewInit(): void {
-    gsap.fromTo(this.sidebarRef.nativeElement,
-      { x: -20, opacity: 0 }, { x: 0, opacity: 1, duration: 0.4, ease: 'power2.out' });
-    gsap.fromTo(this.tabsRef.nativeElement,
-      { y: -10, opacity: 0 }, { y: 0, opacity: 1, duration: 0.3, ease: 'power2.out', delay: 0.2 });
+    if (this.sidebarRef?.nativeElement) {
+      gsap.fromTo(this.sidebarRef.nativeElement,
+        { x: -20, opacity: 0 }, { x: 0, opacity: 1, duration: 0.4, ease: 'power2.out' });
+    }
+    if (this.tabsRef?.nativeElement) {
+      gsap.fromTo(this.tabsRef.nativeElement,
+        { y: -10, opacity: 0 }, { y: 0, opacity: 1, duration: 0.3, ease: 'power2.out', delay: 0.2 });
+    }
   }
 
   openFile(file: CodeFile): void {

@@ -17,7 +17,7 @@ import { ToastService } from '../../../shared/components/toast/toast.service';
         <div class="lg-deco1"></div>
         <div class="lg-deco2"></div>
         <div class="lg-deco3"></div>
-        <div class="lg-hero" #hero>YOURS<span>CODE</span></div>
+        <div class="lg-hero" #hero>Code<span>Sync</span></div>
         <p class="lg-sub">Collaborative coding, reimagined. Build together, ship faster.</p>
         <div class="lg-strip">
           <div style="background:var(--R)"></div>

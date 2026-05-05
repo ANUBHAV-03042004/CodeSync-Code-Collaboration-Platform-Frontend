@@ -145,7 +145,7 @@ export class Oauth2CallbackComponent implements OnInit {
         <!-- Brand mark -->
         <div class="fp-brand" #fpBrand>
           <div class="fp-bolt">⚡</div>
-          <span class="fp-brand-name">Yours<span class="fp-brand-y">CODE</span></span>
+          <span class="fp-brand-name">CODE<span class="fp-brand-y">SYNC</span></span>
         </div>
 
         <!-- Card -->
