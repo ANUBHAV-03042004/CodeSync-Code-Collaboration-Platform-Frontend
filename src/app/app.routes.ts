@@ -8,6 +8,7 @@ import { DashboardComponent } from './features/dashboard/dashboard.component';
 import { EditorComponent } from './features/editor/editor.component';
 import { NotificationsComponent } from './features/notifications/notifications.component';
 import { AdminDashboardComponent } from './features/admin/admin-dashboard.component';
+import { ProfileComponent } from './features/profile/profile.component';
 import {
   Oauth2CallbackComponent,
   ForgotPasswordComponent,
@@ -20,7 +21,7 @@ import {
 } from './features/projects/projects.component';
 
 export const routes: Routes = [
-  // ── Landing (default at localhost:4200) ───────────────────────────────────
+  // ── Landing ───────────────────────────────────────────────────────────────
   { path: '',    component: HomeComponent, pathMatch: 'full' },
   { path: 'home', component: HomeComponent },
 
@@ -33,6 +34,7 @@ export const routes: Routes = [
 
   // ── Protected ─────────────────────────────────────────────────────────────
   { path: 'dashboard',         component: DashboardComponent,         canActivate: [authGuard] },
+  { path: 'profile',           component: ProfileComponent,           canActivate: [authGuard] },
   { path: 'projects',          component: ProjectListComponent,        canActivate: [authGuard] },
   { path: 'projects/new',      component: ProjectCreateComponent,      canActivate: [authGuard] },
   { path: 'projects/:id',      component: ProjectDetailComponent,      canActivate: [authGuard] },

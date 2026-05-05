@@ -138,7 +138,7 @@ import { gsap } from 'gsap';
   <footer class="footer">
     <div class="footer-brand">
       <div class="footer-bolt">⚡</div>
-      <span class="footer-name bb">YoursCode</span>
+      <span class="footer-name bb">YOURSCODE</span>
     </div>
     <div class="footer-links">
       <a routerLink="/login"     class="fl">Sign In</a>
@@ -361,7 +361,7 @@ export class HomeComponent implements AfterViewInit {
 
   private router = inject(Router);
 
-  ticks = ['YoursCode','COLLABORATE','REAL-TIME EDITOR','INSTANT EXECUTION','VERSION HISTORY','COMMENT ANYWHERE','TEAM COLLAB','OPEN SOURCE'];
+  ticks = ['YOURSCODE','COLLABORATE','REAL-TIME EDITOR','INSTANT EXECUTION','VERSION HISTORY','COMMENT ANYWHERE','TEAM COLLAB','OPEN SOURCE'];
   langTicks = ['Python','Java','TypeScript','JavaScript','Go','Rust','C++','Kotlin','Swift','Ruby','PHP','C#'];
 
   codeLines = [
