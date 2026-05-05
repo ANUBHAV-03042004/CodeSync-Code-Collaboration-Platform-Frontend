@@ -44,14 +44,14 @@ const CARD_STYLES = [`
     .oauth-label{font-size:24px;letter-spacing:.08em;color:rgba(255,255,240,.5)}`]
 })
 export class Oauth2CallbackComponent implements OnInit {
-  // ActivatedRoute not needed anymore — token is in the URL fragment (#), not query params
-  private router = inject(Router);
+  private router  = inject(Router);
+  private authSvc = inject(AuthService);
 
   ngOnInit(): void {
     // Backend sends: /oauth2/callback#token=xxx&refreshToken=yyy
     // window.location.hash gives us "#token=xxx&refreshToken=yyy"
-    const fragment = window.location.hash; // e.g. "#token=eyJ...&refreshToken=eyJ..."
-    const params = new URLSearchParams(fragment.startsWith('#') ? fragment.substring(1) : fragment);
+    const fragment = window.location.hash;
+    const params   = new URLSearchParams(fragment.startsWith('#') ? fragment.substring(1) : fragment);
 
     const token        = params.get('token');
     const refreshToken = params.get('refreshToken');
@@ -61,16 +61,34 @@ export class Oauth2CallbackComponent implements OnInit {
       if (refreshToken) {
         localStorage.setItem('refresh_token', refreshToken);
       }
+
+      // FIX: extract userId from the JWT payload (JwtTokenProvider puts it as claim "userId").
+      // Without this, getCurrentUser().userId is undefined everywhere and every
+      // /api/v1/projects/owner/${userId} call becomes /api/v1/projects/owner/undefined → 400.
       try {
         const payload = JSON.parse(atob(token.split('.')[1]));
         if (payload.sub) {
           localStorage.setItem('user', JSON.stringify({
-            email: payload.sub,
-            role: payload.role
+            userId: payload.userId,   // numeric claim added by JwtTokenProvider
+            email:  payload.sub,      // "sub" is the email/username
+            role:   payload.role
           }));
         }
-      } catch { /* malformed JWT — still proceed, profile will load from API */ }
-      this.router.navigate(['/dashboard']);
+      } catch { /* malformed JWT — getProfile() below will recover */ }
+
+      // Fetch full profile (username, fullName, avatarUrl, etc. are not in the JWT).
+      // Store it before navigating so the dashboard sees a complete User object.
+      this.authSvc.getProfile().subscribe({
+        next: (user) => {
+          localStorage.setItem('user', JSON.stringify(user));
+          this.router.navigate(['/dashboard']);
+        },
+        error: () => {
+          // Profile fetch failed (e.g. network blip) — still navigate with the
+          // minimal JWT-derived user; components that need more fields will degrade gracefully.
+          this.router.navigate(['/dashboard']);
+        }
+      });
     } else {
       // No token in fragment — OAuth failed or user cancelled
       this.router.navigate(['/login'], { queryParams: { error: 'oauth_failed' } });
