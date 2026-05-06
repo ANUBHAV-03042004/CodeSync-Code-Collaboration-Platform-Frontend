@@ -54,10 +54,16 @@ describe('Oauth2CallbackComponent', () => {
       });
     }
 
+    // FIX: Oauth2CallbackComponent now injects AuthService (for getProfile()).
+    // AuthService needs HttpClient -> must provide HttpClientTestingModule,
+    // OR provide a mock AuthService so no real HttpClient is needed.
+    const authMock = {
+      getProfile: jest.fn().mockReturnValue(of({ userId: 1, email: 'user@test.com', role: 'USER' }))
+    };
     await TestBed.configureTestingModule({
       imports: [Oauth2CallbackComponent, RouterTestingModule],
-      // ActivatedRoute still needed for the component import, but not used for token anymore
       providers: [
+        { provide: AuthService, useValue: authMock },
         {
           provide: ActivatedRoute,
           useValue: { snapshot: { queryParamMap: { get: () => null } } }
