@@ -1,4 +1,4 @@
-import { Component, OnInit, AfterViewInit, ElementRef, ViewChild, inject } from '@angular/core';
+import { Component, OnInit, AfterViewInit, ElementRef, ViewChild, inject, NgZone } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormBuilder, FormGroup, Validators, ReactiveFormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
@@ -286,6 +286,7 @@ export class ProfileComponent implements OnInit, AfterViewInit {
   private toast = inject(ToastService);
   private router = inject(Router);
   private fb = inject(FormBuilder);
+  private ngZone = inject(NgZone);
 
   user: User | null = null;
   avatarColor = '#1A6FFF';
@@ -331,13 +332,34 @@ export class ProfileComponent implements OnInit, AfterViewInit {
   }
 
   ngOnInit(): void {
+    // Always initialize forms first so the template never sees an undefined formGroup
+    this.profileForm = this.fb.group({
+      username: ['', Validators.required],
+      fullName: [''],
+      bio: [''],
+      avatarUrl: ['']
+    });
+
+    this.passwordForm = this.fb.group({
+      currentPassword: ['', Validators.required],
+      newPassword: ['', [Validators.required, Validators.minLength(8)]],
+      confirmPassword: ['', Validators.required]
+    }, { validators: this.passwordMatchValidator });
+
     this.user = this.authSvc.getCurrentUser();
-    if (!this.user) { this.router.navigate(['/login']); return; }
+    if (!this.user) { this.ngZone.run(() => this.router.navigate(['/login'])); return; }
 
     const colors = ['#FF2D2D','#1A6FFF','#00C853','#FFD600'];
     this.avatarColor = this.user.username ? colors[this.user.username.charCodeAt(0) % colors.length] : colors[0];
 
-    // Load fresh profile from server
+    // Patch form immediately with local user, then refresh from server
+    this.profileForm.patchValue({
+      username: this.user.username,
+      fullName: this.user.fullName || '',
+      bio: this.user.bio || '',
+      avatarUrl: this.user.avatarUrl || ''
+    });
+
     this.authSvc.getProfile().subscribe({
       next: (u) => {
         this.user = u;
@@ -346,19 +368,6 @@ export class ProfileComponent implements OnInit, AfterViewInit {
       },
       error: () => {} // fallback to stored user
     });
-
-    this.profileForm = this.fb.group({
-      username: [this.user.username, Validators.required],
-      fullName: [this.user.fullName || ''],
-      bio: [this.user.bio || ''],
-      avatarUrl: [this.user.avatarUrl || '']
-    });
-
-    this.passwordForm = this.fb.group({
-      currentPassword: ['', Validators.required],
-      newPassword: ['', [Validators.required, Validators.minLength(8)]],
-      confirmPassword: ['', Validators.required]
-    }, { validators: this.passwordMatchValidator });
   }
 
   private passwordMatchValidator(form: FormGroup) {
@@ -423,7 +432,7 @@ export class ProfileComponent implements OnInit, AfterViewInit {
     this.authSvc.deactivateAccount().subscribe({
       next: () => {
         this.authSvc.clearStorage();
-        this.router.navigate(['/login']);
+        this.ngZone.run(() => this.router.navigate(['/login']));
       },
       error: () => { this.toast.error('Failed to delete account'); this.deletingAccount = false; }
     });

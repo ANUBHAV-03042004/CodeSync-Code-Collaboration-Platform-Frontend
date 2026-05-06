@@ -1,4 +1,4 @@
-import { Component, OnInit, AfterViewInit, ElementRef, ViewChild, inject } from '@angular/core';
+import { Component, OnInit, AfterViewInit, ElementRef, ViewChild, inject, NgZone } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormBuilder, FormGroup, Validators, ReactiveFormsModule } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
@@ -689,6 +689,7 @@ export class ResetPasswordComponent implements OnInit {
   private auth = inject(AuthService);
   private router = inject(Router);
   private toast = inject(ToastService);
+  private ngZone = inject(NgZone);
   form: FormGroup = this.fb.group({ newPassword: ['', [Validators.required, Validators.minLength(8)]] });
   loading = false;
   tokenValid: boolean | null = null;
@@ -705,7 +706,7 @@ export class ResetPasswordComponent implements OnInit {
     if (this.form.invalid) return;
     this.loading = true;
     this.auth.resetPassword(this.token, this.form.value.newPassword).subscribe({
-      next: () => { this.toast.success('Password reset! Please sign in.'); this.router.navigate(['/login']); },
+      next: () => { this.toast.success('Password reset! Please sign in.'); this.ngZone.run(() => this.router.navigate(['/login'])); },
       error: () => { this.loading = false; this.toast.error('Reset failed. Try requesting a new link.'); }
     });
   }

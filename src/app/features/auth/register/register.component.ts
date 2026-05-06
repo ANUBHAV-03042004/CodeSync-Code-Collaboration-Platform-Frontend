@@ -1,4 +1,4 @@
-import { Component, OnInit, AfterViewInit, ElementRef, ViewChild, inject } from '@angular/core';
+import { Component, OnInit, AfterViewInit, ElementRef, ViewChild, inject, NgZone } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormBuilder, FormGroup, Validators, ReactiveFormsModule } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
@@ -556,6 +556,7 @@ export class RegisterComponent implements OnInit, AfterViewInit {
   private fb   = inject(FormBuilder);
   private auth  = inject(AuthService);
   private router = inject(Router);
+  private ngZone = inject(NgZone);
   private toast  = inject(ToastService);
 
   form!: FormGroup;
@@ -650,7 +651,7 @@ export class RegisterComponent implements OnInit, AfterViewInit {
     this.auth.register(username, email, password, fullName).subscribe({
       next: () => {
         this.toast.success('Account created! Please sign in.');
-        this.router.navigate(['/login']);
+        this.ngZone.run(() => this.router.navigate(['/login']));
       },
       error: (err: any) => {
         this.loading = false;

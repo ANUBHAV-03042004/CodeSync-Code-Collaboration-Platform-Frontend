@@ -1,4 +1,4 @@
-import { Component, OnInit, AfterViewInit, ElementRef, ViewChild, inject } from '@angular/core';
+import { Component, OnInit, AfterViewInit, ElementRef, ViewChild, inject, NgZone } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormBuilder, FormGroup, Validators, ReactiveFormsModule, FormsModule } from '@angular/forms';
 import { Router, RouterLink, ActivatedRoute } from '@angular/router';
@@ -267,7 +267,7 @@ export class ProjectCreateComponent implements AfterViewInit {
     this.projectSvc.create(this.form.value).subscribe({
       next: p => {
         this.toast.success('Project created!');
-        this.router.navigate(['/projects', p.projectId]);
+        this.ngZone.run(() => this.router.navigate(['/projects', p.projectId]));
       },
       error: () => { this.loading = false; this.toast.error('Failed to create project.'); }
     });
