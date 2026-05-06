@@ -437,7 +437,10 @@ describe('NotificationsComponent', () => {
     Object.defineProperty(e, 'stopPropagation', { value: jest.fn() });
     item.dispatchEvent(e);
     // Re-invoke delete with the real event so e.target === item
-    const realEvent = Object.assign(e, { target: item });
+    // Event.target is a read-only getter — Object.assign silently fails on it.
+    // Object.defineProperty overrides the descriptor directly so the value sticks.
+    Object.defineProperty(e, 'target', { value: item, writable: false, configurable: true });
+    const realEvent = e;
     component.delete(1, realEvent as unknown as Event);
     document.body.removeChild(item);
     expect(notifSvc.delete).toHaveBeenCalledWith(1);
