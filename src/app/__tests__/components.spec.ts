@@ -558,7 +558,6 @@ describe('EditorComponent', () => {
 
     await TestBed.configureTestingModule({
       imports: [EditorComponent, RouterTestingModule],
-      schemas: [NO_ERRORS_SCHEMA],
       providers: [
         { provide: FileService, useValue: fileSvc },
         { provide: ExecutionService, useValue: execSvc },
@@ -569,7 +568,13 @@ describe('EditorComponent', () => {
         { provide: ToastService, useValue: createToastSvcMock() },
         { provide: ActivatedRoute, useValue: { snapshot: { paramMap: { get: () => '1' } } } }
       ]
-    }).compileComponents();
+    })
+    // EditorComponent is standalone — schemas on the TestBed host don't propagate
+    // into a standalone component's own template compiler. overrideComponent injects
+    // NO_ERRORS_SCHEMA directly into the component's compilation context, silencing
+    // the [spellcheck] unknown-property error on the native <textarea>.
+    .overrideComponent(EditorComponent, { add: { schemas: [NO_ERRORS_SCHEMA] } })
+    .compileComponents();
     fixture = TestBed.createComponent(EditorComponent);
     component = fixture.componentInstance;
     fixture.detectChanges();
