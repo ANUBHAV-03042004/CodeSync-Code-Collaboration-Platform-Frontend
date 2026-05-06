@@ -428,13 +428,20 @@ describe('NotificationsComponent', () => {
   });
 
   it('should delete notification', () => {
-    // The component always calls notifSvc.delete (API-first), then animates
-    // the row out in parallel if a DOM element is found. We just need a valid
-    // event with stopPropagation — no real DOM element required.
+    // The component's delete() calls (e.target as HTMLElement).closest('.notif-item').
+    // e.target is null when a MouseEvent is constructed without dispatching from a DOM
+    // element, causing a TypeError. Fix: dispatch from a real element that does NOT
+    // have class 'notif-item' so closest() returns null → component takes the else
+    // branch and calls notifSvc.delete(id).
+    const anchor = document.createElement('div'); // no 'notif-item' class → closest() = null
+    document.body.appendChild(anchor);
     const e = new MouseEvent('click', { bubbles: true });
+    // Stub stopPropagation so the component's e.stopPropagation() call doesn't fail.
     Object.defineProperty(e, 'stopPropagation', { value: jest.fn() });
-    // target is null in jsdom (no dispatch context) — component guards with ?.closest()
+    // Override e.target (read-only getter) with our element so .closest() doesn't throw.
+    Object.defineProperty(e, 'target', { value: anchor, configurable: true });
     component.delete(1, e as unknown as Event);
+    document.body.removeChild(anchor);
     expect(notifSvc.delete).toHaveBeenCalledWith(1);
   });
 
@@ -558,7 +565,6 @@ describe('EditorComponent', () => {
 
     await TestBed.configureTestingModule({
       imports: [EditorComponent, RouterTestingModule],
-      schemas: [NO_ERRORS_SCHEMA],
       providers: [
         { provide: FileService, useValue: fileSvc },
         { provide: ExecutionService, useValue: execSvc },
@@ -569,7 +575,13 @@ describe('EditorComponent', () => {
         { provide: ToastService, useValue: createToastSvcMock() },
         { provide: ActivatedRoute, useValue: { snapshot: { paramMap: { get: () => '1' } } } }
       ]
-    }).compileComponents();
+    })
+    // EditorComponent is standalone — schemas on the TestBed host don't propagate
+    // into a standalone component's own template compiler. overrideComponent injects
+    // NO_ERRORS_SCHEMA directly into the component's compilation context, silencing
+    // the [spellcheck] unknown-property error on the native <textarea>.
+    .overrideComponent(EditorComponent, { add: { schemas: [NO_ERRORS_SCHEMA] } })
+    .compileComponents();
     fixture = TestBed.createComponent(EditorComponent);
     component = fixture.componentInstance;
     fixture.detectChanges();
