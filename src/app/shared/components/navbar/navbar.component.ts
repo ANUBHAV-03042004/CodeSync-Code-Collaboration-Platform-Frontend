@@ -1,4 +1,4 @@
-import { Component, OnInit, OnDestroy, AfterViewInit, ElementRef, ViewChild, HostListener, inject } from '@angular/core';
+import { Component, OnInit, OnDestroy, AfterViewInit, ElementRef, ViewChild, HostListener, inject, NgZone } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router, RouterLink, RouterLinkActive, NavigationEnd } from '@angular/router';
 import { gsap } from 'gsap';
@@ -194,6 +194,7 @@ export class NavbarComponent implements OnInit, OnDestroy, AfterViewInit {
   private authSvc = inject(AuthService);
   private notifSvc = inject(NotificationService);
   private router = inject(Router);
+  private ngZone = inject(NgZone);
 
   user: User | null = null;
   unreadCount = 0;
@@ -246,8 +247,8 @@ export class NavbarComponent implements OnInit, OnDestroy, AfterViewInit {
 
   logout(): void {
     this.authSvc.logout().subscribe({
-      next: () => this.router.navigate(['/login']),
-      error: () => { this.authSvc.clearStorage(); this.router.navigate(['/login']); }
+      next: () => this.ngZone.run(() => this.router.navigate(['/login'])),
+      error: () => { this.authSvc.clearStorage(); this.ngZone.run(() => this.router.navigate(['/login'])); }
     });
   }
 
