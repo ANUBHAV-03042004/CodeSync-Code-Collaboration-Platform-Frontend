@@ -1,4 +1,3 @@
-// This file intentionally left as an empty module stub.
-// The real NotificationsComponent lives at src/app/features/notifications/notifications.component.ts
-// This stub exists to prevent accidental inclusion of a stray file in __tests__/.
-export {};
+// Re-export the real component so TypeScript resolves this file correctly
+// when it is included in compilation alongside the real source.
+export { NotificationsComponent } from '../features/notifications/notifications.component';
