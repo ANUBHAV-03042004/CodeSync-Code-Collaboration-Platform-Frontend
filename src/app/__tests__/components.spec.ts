@@ -1,4 +1,5 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { NO_ERRORS_SCHEMA } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ReactiveFormsModule, FormsModule } from '@angular/forms';
 import { RouterTestingModule } from '@angular/router/testing';
@@ -427,22 +428,13 @@ describe('NotificationsComponent', () => {
   });
 
   it('should delete notification', () => {
-    // FIX: new Event('click') has e.target=null in jsdom, causing
-    // (e.target as HTMLElement).closest() to throw TypeError.
-    // Dispatch the event from a real DOM element so e.target is set.
-    const item = document.createElement('div');
-    item.className = 'notif-item';
-    document.body.appendChild(item);
+    // The component always calls notifSvc.delete (API-first), then animates
+    // the row out in parallel if a DOM element is found. We just need a valid
+    // event with stopPropagation — no real DOM element required.
     const e = new MouseEvent('click', { bubbles: true });
     Object.defineProperty(e, 'stopPropagation', { value: jest.fn() });
-    item.dispatchEvent(e);
-    // Re-invoke delete with the real event so e.target === item
-    // Event.target is a read-only getter — Object.assign silently fails on it.
-    // Object.defineProperty overrides the descriptor directly so the value sticks.
-    Object.defineProperty(e, 'target', { value: item, writable: false, configurable: true });
-    const realEvent = e;
-    component.delete(1, realEvent as unknown as Event);
-    document.body.removeChild(item);
+    // target is null in jsdom (no dispatch context) — component guards with ?.closest()
+    component.delete(1, e as unknown as Event);
     expect(notifSvc.delete).toHaveBeenCalledWith(1);
   });
 
@@ -566,6 +558,7 @@ describe('EditorComponent', () => {
 
     await TestBed.configureTestingModule({
       imports: [EditorComponent, RouterTestingModule],
+      schemas: [NO_ERRORS_SCHEMA],
       providers: [
         { provide: FileService, useValue: fileSvc },
         { provide: ExecutionService, useValue: execSvc },
