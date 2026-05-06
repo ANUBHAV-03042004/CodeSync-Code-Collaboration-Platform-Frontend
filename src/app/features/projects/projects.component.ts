@@ -243,6 +243,7 @@ export class ProjectCreateComponent implements AfterViewInit {
   private fb = inject(FormBuilder);
   private projectSvc = inject(ProjectService);
   private router = inject(Router);
+  private ngZone = inject(NgZone);
   private toast = inject(ToastService);
 
   loading = false;

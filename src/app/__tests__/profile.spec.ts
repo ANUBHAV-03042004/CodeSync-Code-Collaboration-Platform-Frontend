@@ -104,9 +104,22 @@ describe('ProfileComponent – init', () => {
   });
 
   it('should navigate to /login if no user returned', async () => {
-    const { router } = await createComponent({ getCurrentUser: jest.fn().mockReturnValue(null) });
-    const spy = jest.spyOn(router, 'navigate');
-    // component already initialised — re-check by inspecting navigate was called
+    const authMock = { ...createAuthMock(), getCurrentUser: jest.fn().mockReturnValue(null) };
+    const toastMock = createToastMock();
+
+    await TestBed.resetTestingModule();
+    await TestBed.configureTestingModule({
+      imports: [ProfileComponent, RouterTestingModule, ReactiveFormsModule],
+      providers: [
+        { provide: AuthService, useValue: authMock },
+        { provide: ToastService, useValue: toastMock }
+      ]
+    }).compileComponents();
+
+    const fixture = TestBed.createComponent(ProfileComponent);
+    const router = TestBed.inject(Router);
+    const spy = jest.spyOn(router, 'navigate');  // spy BEFORE detectChanges
+    fixture.detectChanges();
     expect(spy).toHaveBeenCalledWith(['/login']);
   });
 });

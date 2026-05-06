@@ -347,7 +347,7 @@ export class ProfileComponent implements OnInit, AfterViewInit {
     }, { validators: this.passwordMatchValidator });
 
     this.user = this.authSvc.getCurrentUser();
-    if (!this.user) { this.ngZone.run(() => this.router.navigate(['/login'])); return; }
+    if (!this.user) { this.router.navigate(['/login']); return; }
 
     const colors = ['#FF2D2D','#1A6FFF','#00C853','#FFD600'];
     this.avatarColor = this.user.username ? colors[this.user.username.charCodeAt(0) % colors.length] : colors[0];
