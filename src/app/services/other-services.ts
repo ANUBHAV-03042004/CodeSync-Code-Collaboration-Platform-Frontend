@@ -200,6 +200,11 @@ export class NotificationService {
   }
 
   connectPush(): void {
+    // FIX: only connect if a valid token is present.
+    // The navbar calls connectPush() on init. If the OAuth2 callback hasn't
+    // finished storing the token yet, the STOMP connect and every HTTP call
+    // fires without a Bearer header -> 403 Forbidden from the gateway.
+    if (!localStorage.getItem('access_token')) return;
     this.ws.connect('notifications', environment.wsNotificationEndpoint);
     this.ws.subscribe('notifications', '/user/queue/notifications', msg => {
       const notif: Notification = JSON.parse(msg.body);

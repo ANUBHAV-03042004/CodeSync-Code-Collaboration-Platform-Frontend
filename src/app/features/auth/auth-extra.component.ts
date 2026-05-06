@@ -76,19 +76,21 @@ export class Oauth2CallbackComponent implements OnInit {
         }
       } catch { /* malformed JWT — getProfile() below will recover */ }
 
-      // Fetch full profile (username, fullName, avatarUrl, etc. are not in the JWT).
-      // Store it before navigating so the dashboard sees a complete User object.
-      this.authSvc.getProfile().subscribe({
-        next: (user) => {
-          localStorage.setItem('user', JSON.stringify(user));
-          this.router.navigate(['/dashboard']);
-        },
-        error: () => {
-          // Profile fetch failed (e.g. network blip) — still navigate with the
-          // minimal JWT-derived user; components that need more fields will degrade gracefully.
-          this.router.navigate(['/dashboard']);
-        }
-      });
+      // Fetch full profile to hydrate username, fullName, avatarUrl etc.
+      // CRITICAL FIX: merge JWT userId into profile response so
+      // /api/v1/projects/owner/${userId} never becomes /owner/undefined.
+      try {
+        const jwtPayload = JSON.parse(atob(token.split('.')[1]));
+        const jwtUserId  = jwtPayload.userId;
+        this.authSvc.getProfile().subscribe({
+          next: (user) => {
+            const merged = { ...user, userId: user.userId ?? jwtUserId };
+            localStorage.setItem('user', JSON.stringify(merged));
+            this.router.navigate(['/dashboard']);
+          },
+          error: () => { this.router.navigate(['/dashboard']); }
+        });
+      } catch { this.router.navigate(['/dashboard']); }
     } else {
       // No token in fragment — OAuth failed or user cancelled
       this.router.navigate(['/login'], { queryParams: { error: 'oauth_failed' } });

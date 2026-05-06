@@ -23,7 +23,14 @@ export class WebSocketService implements OnDestroy {
 
     const token = localStorage.getItem('access_token');
     const client = new Client({
-      webSocketFactory: () => new SockJS(endpoint) as IStompSocket,
+      // FIX: restrict SockJS to websocket-only transport.
+      // SockJS default transport list starts with XHR streaming/polling, which
+      // sends requests with withCredentials=true. The gateway CORS config has
+      // allowCredentials=false for JWT routes, so the browser blocks these with
+      // 'Access-Control-Allow-Credentials must be true'. Limiting to
+      // ['websocket'] bypasses the XHR info endpoint entirely and connects
+      // directly over native WebSocket, which is not subject to CORS preflight.
+      webSocketFactory: () => new SockJS(endpoint, null, { transports: ['websocket'] }) as IStompSocket,
       connectHeaders: token ? { Authorization: `Bearer ${token}` } : {},
       reconnectDelay: 5000,
       onConnect: () => status$.next(true),
