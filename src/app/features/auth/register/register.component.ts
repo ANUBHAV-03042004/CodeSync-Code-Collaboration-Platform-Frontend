@@ -649,9 +649,13 @@ export class RegisterComponent implements OnInit, AfterViewInit {
     this.loading = true;
     const { username, email, password, fullName } = this.form.value;
     this.auth.register(username, email, password, fullName).subscribe({
-      next: () => {
-        this.toast.success('Account created! Please sign in.');
-        this.ngZone.run(() => this.router.navigate(['/login']));
+      next: (res: any) => {
+        const msg = res.message || 'Registration successful! Please check your email.';
+        this.ngZone.run(() => {
+          this.router.navigate(['/login'], { 
+            queryParams: { registered: 'true', message: msg } 
+          });
+        });
       },
       error: (err: any) => {
         this.loading = false;

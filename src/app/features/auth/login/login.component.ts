@@ -1,7 +1,7 @@
 import { Component, OnInit, AfterViewInit, ElementRef, ViewChild, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormBuilder, FormGroup, Validators, ReactiveFormsModule } from '@angular/forms';
-import { Router, RouterLink } from '@angular/router';
+import { Router, RouterLink, ActivatedRoute } from '@angular/router';
 import { gsap } from 'gsap';
 import { AuthService } from '../../../services/auth.service';
 import { ToastService } from '../../../shared/components/toast/toast.service';
@@ -116,6 +116,7 @@ export class LoginComponent implements OnInit, AfterViewInit {
   private fb = inject(FormBuilder);
   private auth = inject(AuthService);
   private router = inject(Router);
+  private route = inject(ActivatedRoute);
   private toast = inject(ToastService);
 
   form!: FormGroup;
@@ -128,6 +129,17 @@ export class LoginComponent implements OnInit, AfterViewInit {
     this.form = this.fb.group({
       email: ['', [Validators.required, Validators.email]],
       password: ['', Validators.required]
+    });
+
+    // Check for query parameters for toasts
+    this.route.queryParams.subscribe(params => {
+      if (params['verified'] === 'true') {
+        this.toast.success('Email verified successfully! You can now log in.');
+      } else if (params['registered'] === 'true') {
+        this.toast.success(params['message'] || 'Registration successful! Please check your email.');
+      } else if (params['error']) {
+        this.toast.error(params['error'].replaceAll('_', ' '));
+      }
     });
   }
 
