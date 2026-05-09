@@ -20,6 +20,7 @@ import { User } from '../../../core/models';
         </a>
 
         <div class="nb-links" *ngIf="user">
+          <a routerLink="/" routerLinkActive="act" [routerLinkActiveOptions]="{exact:true}">Home</a>
           <a routerLink="/dashboard" routerLinkActive="act">Dashboard</a>
           <a routerLink="/projects"  routerLinkActive="act">Projects</a>
           <a routerLink="/notifications" routerLinkActive="act">Notifications</a>
@@ -88,6 +89,7 @@ import { User } from '../../../core/models';
             </div>
           </div>
           <div class="mm-sep"></div>
+          <a class="mm-link" routerLink="/" routerLinkActive="act" [routerLinkActiveOptions]="{exact:true}" (click)="mobileMenuOpen=false">🏠 Home</a>
           <a class="mm-link" routerLink="/dashboard" routerLinkActive="act" (click)="mobileMenuOpen=false">📊 Dashboard</a>
           <a class="mm-link" routerLink="/projects" routerLinkActive="act" (click)="mobileMenuOpen=false">📁 Projects</a>
           <a class="mm-link" routerLink="/notifications" routerLinkActive="act" (click)="mobileMenuOpen=false">
