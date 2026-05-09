@@ -17,199 +17,251 @@ import { ToastService } from '../../shared/components/toast/toast.service';
   imports: [CommonModule, FormsModule],
   template: `
     <div class="editor-shell" #shell>
-      <!-- File Tree Sidebar -->
-      <aside class="file-tree" #sidebar>
-        <div class="file-tree-header">
-          <span class="project-name">{{ projectName }}</span>
-          <button class="icon-btn" (click)="showNewFileDialog = true" title="New file">+</button>
+      <!-- High-Visibility Marker -->
+      <div class="nb-editor-marker">NEO-BRUTALIST EDITOR ACTIVE</div>
+      <!-- Sidebar: File Tree -->
+      <aside class="nb-sidebar" #sidebar>
+        <div class="brand-box">
+          <div class="nb-bolt">⚡</div>
+          <span class="nb-name">YOURS<span class="nb-name-accent">CODE</span></span>
         </div>
-        <div class="file-list">
-          <div class="file-item"
+        <div class="sidebar-header">
+          <span class="p-name">{{ projectName }}</span>
+          <button class="nb-icon-btn plus" (click)="showNewFileDialog = true" title="New file">+</button>
+        </div>
+        <div class="file-scroller">
+          <div class="file-node"
                *ngFor="let f of files"
                [class.active]="f.fileId === activeFile?.fileId"
                (click)="openFile(f)">
-            <span class="file-icon">{{ getFileIcon(f.language) }}</span>
-            <span class="file-name">{{ f.name }}</span>
+            <span class="f-icon">{{ getFileIcon(f.language) }}</span>
+            <span class="f-name">{{ f.name }}</span>
+            <div class="active-indicator" *ngIf="f.fileId === activeFile?.fileId"></div>
           </div>
+        </div>
+        <div class="sidebar-footer">
+           <button class="nb-btn-sm btn-yellow w-full" (click)="toggleCollab()">
+             {{ sessionId ? '🔴 LEAVE COLLAB' : '👥 START COLLAB' }}
+           </button>
         </div>
       </aside>
 
-      <!-- Main Editor Area -->
-      <main class="editor-main">
-        <!-- Tabs -->
-        <div class="editor-tabs" #tabs>
-          <div class="tab active" *ngIf="activeFile">
-            <span>{{ activeFile.name }}</span>
-            <span class="unsaved-dot" *ngIf="unsaved">●</span>
-          </div>
-          <div class="tab-actions">
-            <button class="icon-btn" (click)="save()" title="Save (Ctrl+S)" [disabled]="!unsaved">💾</button>
-            <button class="icon-btn" (click)="runCode()" title="Run" [disabled]="running">▶</button>
-            <button class="icon-btn" (click)="createSnapshot()" title="Create snapshot">📸</button>
-            <button class="icon-btn" (click)="toggleVersions()" title="Version history">🕒</button>
-            <button class="icon-btn" (click)="toggleCollab()" title="Start collaboration">👥</button>
-          </div>
-        </div>
-
-        <!-- Collab cursors overlay -->
-        <div class="collab-cursors">
-          <div class="remote-cursor" *ngFor="let cursor of remoteCursors | keyvalue"
-               [style.top]="getCursorTop(cursor.value.line)"
-               [style.left]="getCursorLeft(cursor.value.col)">
-            <div class="cursor-flag">User {{ cursor.key }}</div>
-          </div>
-        </div>
-
-        <!-- Monaco Editor placeholder (integrate ngx-monaco-editor-v2 here) -->
-        <div class="monaco-container" #monacoContainer>
-          <textarea class="code-textarea"
-                    [(ngModel)]="editorContent"
-                    (input)="onContentChange()"
-                    (keydown)="onKeydown($event)"
-                    placeholder="Select a file to edit..."
-                    [spellcheck]="false"></textarea>
-        </div>
-
-        <!-- Execution Panel -->
-        <div class="execution-panel" #execPanel [class.open]="execPanelOpen">
-          <div class="panel-header" (click)="execPanelOpen = !execPanelOpen">
-            <span>Terminal</span>
-            <span class="job-status" [class]="currentJob?.status?.toLowerCase() || ''">
-              {{ currentJob?.status || 'Ready' }}
-            </span>
-          </div>
-          <div class="panel-body" *ngIf="execPanelOpen">
-            <div class="stdin-row">
-              <input [(ngModel)]="stdin" placeholder="stdin input..." class="stdin-input" />
-              <button (click)="runCode()" [disabled]="running" class="run-btn">
-                {{ running ? '⏳ Running…' : '▶ Run' }}
-              </button>
+      <!-- Main Editor -->
+      <main class="nb-main">
+        <!-- Toolbar / Tabs -->
+        <div class="nb-toolbar" #tabs>
+          <div class="nb-tabs">
+            <div class="nb-tab" *ngIf="activeFile" [style.border-bottom-color]="getLangColor(activeFile.language)">
+              <span class="f-icon">{{ getFileIcon(activeFile.language) }}</span>
+              <span>{{ activeFile.name }}</span>
+              <span class="unsaved-mark" *ngIf="unsaved">●</span>
             </div>
-            <pre class="output">{{ getOutput() }}</pre>
+          </div>
+
+          <div class="toolbar-actions">
+            <button class="nb-action-btn" (click)="save()" [disabled]="!unsaved" title="Save">💾</button>
+            <button class="nb-action-btn run" (click)="runCode()" [disabled]="running" title="Run">▶</button>
+            <button class="nb-action-btn" (click)="createSnapshot()" title="Snapshot">📸</button>
+            <button class="nb-action-btn" (click)="toggleVersions()" [class.active]="rightPanelMode === 'versions'" title="History">🕒</button>
+            <button class="nb-action-btn" (click)="rightPanelMode = 'comments'" [class.active]="rightPanelMode === 'comments'" title="Comments">💬</button>
+          </div>
+        </div>
+
+        <div class="editor-body">
+          <!-- Monaco Placeholder -->
+          <div class="editor-container" #monacoContainer>
+             <textarea class="nb-textarea"
+                       [(ngModel)]="editorContent"
+                       (input)="onContentChange()"
+                       (keydown)="onKeydown($event)"
+                       placeholder="Select a file to start coding..."
+                       [spellcheck]="false"></textarea>
+
+             <!-- Remote Cursors -->
+             <div class="cursor-layer" *ngIf="sessionId">
+                <div class="remote-cursor" *ngFor="let cursor of remoteCursors | keyvalue"
+                     [style.top]="getCursorTop(cursor.value.line)"
+                     [style.left]="getCursorLeft(cursor.value.col)">
+                  <div class="cursor-bar"></div>
+                  <div class="cursor-label">User {{ cursor.key }}</div>
+                </div>
+             </div>
+          </div>
+
+          <!-- Bottom Panel: Console -->
+          <div class="nb-console" [class.collapsed]="!execPanelOpen">
+            <div class="console-header" (click)="execPanelOpen = !execPanelOpen">
+              <div class="flex items-center gap-12">
+                <span class="terminal-icon">$_</span>
+                <span class="label">TERMINAL / CONSOLE</span>
+              </div>
+              <div class="flex items-center gap-12">
+                <span class="status-chip" [class]="currentJob?.status?.toLowerCase() || ''">
+                  {{ currentJob?.status || 'READY' }}
+                </span>
+                <span class="toggle-icon">{{ execPanelOpen ? '▼' : '▲' }}</span>
+              </div>
+            </div>
+            <div class="console-body" *ngIf="execPanelOpen">
+              <div class="input-row">
+                <div class="prompt">guest&#64;yourscode:~$</div>
+                <input [(ngModel)]="stdin" placeholder="provide stdin here..." class="console-input" (keydown.enter)="runCode()" />
+                <button (click)="runCode()" [disabled]="running" class="nb-btn-sm btn-green run-btn">
+                   {{ running ? 'EXECUTING...' : 'RUN CODE' }}
+                </button>
+              </div>
+              <div class="output-area">
+                <div class="output-hdr" *ngIf="currentJob">
+                  <span>EXIT CODE: {{ currentJob.exitCode }}</span>
+                  <span>TIME: {{ currentJob.executionTimeMs }}ms</span>
+                </div>
+                <pre *ngIf="currentJob" [class.error-out]="currentJob.stderr">{{ getOutput() }}</pre>
+                <div class="placeholder" *ngIf="!currentJob">
+                  <p>// Execution output will appear here</p>
+                  <p>// Click RUN to start the process</p>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       </main>
 
-      <!-- Right Panel: Comments / Versions -->
-      <aside class="right-panel" *ngIf="rightPanelMode" #rightPanel>
-        <div class="right-panel-header">
-          <span>{{ rightPanelMode === 'comments' ? '💬 Comments' : '🕒 Version History' }}</span>
-          <button class="icon-btn" (click)="rightPanelMode = null">✕</button>
+      <!-- Right Panel -->
+      <aside class="nb-right-panel" *ngIf="rightPanelMode" #rightPanel>
+        <div class="rp-header">
+          <span class="label">{{ rightPanelMode === 'comments' ? 'COMMENTS' : 'SNAPSHOTS' }}</span>
+          <button class="close-btn" (click)="rightPanelMode = null">✕</button>
         </div>
 
-        <!-- Comments -->
-        <ng-container *ngIf="rightPanelMode === 'comments'">
-          <div class="comment-list">
-            <div class="comment" *ngFor="let c of comments">
-              <div class="comment-header">
-                <span class="comment-author">User {{ c.authorId }}</span>
-                <span class="comment-line">Line {{ c.lineNumber }}</span>
-                <button class="icon-btn" (click)="resolveComment(c.id)" *ngIf="!c.resolved">✓</button>
+        <div class="rp-content">
+          <!-- Comments Mode -->
+          <div class="comment-scroller" *ngIf="rightPanelMode === 'comments'">
+            <div class="nb-comment-card" *ngFor="let c of comments">
+              <div class="c-meta">
+                <span class="c-user">User #{{ c.authorId }}</span>
+                <span class="c-line">L{{ c.lineNumber }}</span>
+                <button class="c-resolve" (click)="resolveComment(c.id)" *ngIf="!c.resolved">DONE</button>
               </div>
-              <p class="comment-body" [class.resolved]="c.resolved">{{ c.content }}</p>
+              <div class="c-text" [class.resolved]="c.resolved">{{ c.content }}</div>
+            </div>
+            <div class="comment-input-box">
+              <textarea [(ngModel)]="newComment" placeholder="Write a comment..." class="nb-textarea-sm"></textarea>
+              <button (click)="addComment()" class="nb-btn-sm btn-blue w-full mt-8">POST COMMENT</button>
             </div>
           </div>
-          <div class="add-comment">
-            <textarea [(ngModel)]="newComment" placeholder="Add a comment…" class="comment-textarea"></textarea>
-            <button (click)="addComment()" class="btn-primary-sm">Post</button>
-          </div>
-        </ng-container>
 
-        <!-- Version History -->
-        <ng-container *ngIf="rightPanelMode === 'versions'">
-          <div class="version-list">
-            <div class="version-item" *ngFor="let snap of snapshots">
-              <div class="version-header">
-                <span class="version-msg">{{ snap.message }}</span>
-                <span class="version-branch">{{ snap.branch }}</span>
+          <!-- Version History Mode -->
+          <div class="version-scroller" *ngIf="rightPanelMode === 'versions'">
+            <div class="nb-version-card" *ngFor="let snap of snapshots">
+              <div class="v-header">
+                <span class="v-msg">{{ snap.message }}</span>
+                <span class="v-tag">{{ snap.branch }}</span>
               </div>
-              <div class="version-meta">v{{ snap.version }} · {{ snap.createdAt | date:'short' }}</div>
-              <button class="btn-outline-sm" (click)="restoreSnapshot(snap.id)">Restore</button>
+              <div class="v-meta">v{{ snap.version }} · {{ snap.createdAt | date:'shortTime' }}</div>
+              <button class="nb-btn-sm btn-white w-full mt-8" (click)="restoreSnapshot(snap.id)">RESTORE</button>
             </div>
           </div>
-        </ng-container>
+        </div>
       </aside>
     </div>
   `,
   styles: [`
-    .editor-shell { display: flex; height: 100vh; background: #0d0d17; overflow: hidden; }
-    .file-tree { width: 220px; background: rgba(255,255,255,0.03); border-right: 1px solid rgba(255,255,255,0.08);
-      display: flex; flex-direction: column; flex-shrink: 0; }
-    .file-tree-header { padding: 16px; display: flex; align-items: center; justify-content: space-between;
-      border-bottom: 1px solid rgba(255,255,255,0.08); }
-    .project-name { color: rgba(255,255,255,0.7); font-size: 13px; font-weight: 600; overflow: hidden;
-      text-overflow: ellipsis; white-space: nowrap; }
-    .file-list { flex: 1; overflow-y: auto; padding: 8px 0; }
-    .file-item { display: flex; align-items: center; gap: 8px; padding: 8px 16px;
-      cursor: pointer; color: rgba(255,255,255,0.6); font-size: 13px;
-      transition: background 0.15s, color 0.15s; }
-    .file-item:hover { background: rgba(255,255,255,0.05); color: #fff; }
-    .file-item.active { background: rgba(99,102,241,0.15); color: #a5b4fc; }
-    .file-icon { font-size: 14px; }
-    .editor-main { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
-    .editor-tabs { display: flex; align-items: center; background: rgba(255,255,255,0.03);
-      border-bottom: 1px solid rgba(255,255,255,0.08); padding: 0 8px; gap: 4px; }
-    .tab { display: flex; align-items: center; gap: 6px; padding: 10px 16px;
-      color: rgba(255,255,255,0.7); font-size: 13px; border-bottom: 2px solid #6366f1; }
-    .unsaved-dot { color: #f59e0b; font-size: 10px; }
-    .tab-actions { margin-left: auto; display: flex; gap: 4px; }
-    .icon-btn { background: none; border: none; color: rgba(255,255,255,0.5); cursor: pointer;
-      padding: 6px 8px; border-radius: 6px; font-size: 14px; transition: background 0.15s, color 0.15s; }
-    .icon-btn:hover { background: rgba(255,255,255,0.08); color: #fff; }
-    .icon-btn:disabled { opacity: 0.4; cursor: not-allowed; }
-    .collab-cursors { position: absolute; pointer-events: none; z-index: 10; }
-    .remote-cursor { position: absolute; }
-    .cursor-flag { background: #f59e0b; color: #000; font-size: 11px; padding: 2px 6px;
-      border-radius: 4px; white-space: nowrap; }
-    .monaco-container { flex: 1; overflow: hidden; position: relative; }
-    .code-textarea { width: 100%; height: 100%; background: transparent; border: none;
-      color: #e2e8f0; font-family: 'JetBrains Mono', 'Fira Code', monospace; font-size: 14px;
-      line-height: 1.6; padding: 16px; resize: none; outline: none; }
-    .execution-panel { border-top: 1px solid rgba(255,255,255,0.08); }
-    .panel-header { display: flex; align-items: center; justify-content: space-between;
-      padding: 10px 16px; cursor: pointer; color: rgba(255,255,255,0.7); font-size: 13px;
-      background: rgba(255,255,255,0.03); }
-    .panel-header:hover { background: rgba(255,255,255,0.06); }
-    .job-status { font-size: 12px; border-radius: 4px; padding: 2px 8px; }
-    .job-status.completed { background: rgba(34,197,94,0.15); color: #4ade80; }
-    .job-status.running { background: rgba(245,158,11,0.15); color: #fbbf24; }
-    .job-status.failed { background: rgba(239,68,68,0.15); color: #f87171; }
-    .panel-body { padding: 12px 16px; display: flex; flex-direction: column; gap: 10px; max-height: 240px; }
-    .stdin-row { display: flex; gap: 8px; }
-    .stdin-input { flex: 1; background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.1);
-      border-radius: 6px; padding: 8px 12px; color: #fff; font-size: 13px; outline: none; }
-    .run-btn { background: #22c55e; border: none; border-radius: 6px; padding: 8px 16px;
-      color: #000; font-size: 13px; font-weight: 600; cursor: pointer; white-space: nowrap; }
-    .run-btn:disabled { opacity: 0.6; cursor: not-allowed; }
-    .output { color: #4ade80; font-family: monospace; font-size: 13px; margin: 0;
-      overflow-y: auto; max-height: 140px; white-space: pre-wrap; }
-    .right-panel { width: 300px; border-left: 1px solid rgba(255,255,255,0.08);
-      background: rgba(255,255,255,0.02); display: flex; flex-direction: column; }
-    .right-panel-header { padding: 16px; display: flex; align-items: center; justify-content: space-between;
-      border-bottom: 1px solid rgba(255,255,255,0.08); color: rgba(255,255,255,0.7); font-size: 14px; }
-    .comment-list { flex: 1; overflow-y: auto; padding: 12px; }
-    .comment { background: rgba(255,255,255,0.04); border-radius: 8px; padding: 12px; margin-bottom: 8px; }
-    .comment-header { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
-    .comment-author { color: #818cf8; font-size: 12px; font-weight: 600; }
-    .comment-line { color: rgba(255,255,255,0.4); font-size: 11px; }
-    .comment-body { color: rgba(255,255,255,0.7); font-size: 13px; margin: 0; }
-    .comment-body.resolved { text-decoration: line-through; opacity: 0.5; }
-    .add-comment { padding: 12px; border-top: 1px solid rgba(255,255,255,0.08); }
-    .comment-textarea { width: 100%; background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.1);
-      border-radius: 8px; padding: 10px; color: #fff; font-size: 13px; resize: vertical;
-      outline: none; min-height: 80px; box-sizing: border-box; }
-    .btn-primary-sm { background: #6366f1; border: none; border-radius: 6px; padding: 8px 16px;
-      color: #fff; font-size: 13px; cursor: pointer; margin-top: 8px; width: 100%; }
-    .version-list { flex: 1; overflow-y: auto; padding: 12px; }
-    .version-item { background: rgba(255,255,255,0.04); border-radius: 8px; padding: 12px; margin-bottom: 8px; }
-    .version-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 4px; }
-    .version-msg { color: #fff; font-size: 13px; font-weight: 500; }
-    .version-branch { background: rgba(99,102,241,0.2); color: #818cf8; border-radius: 4px;
-      padding: 2px 6px; font-size: 11px; }
-    .version-meta { color: rgba(255,255,255,0.4); font-size: 11px; margin-bottom: 8px; }
-    .btn-outline-sm { background: none; border: 1px solid rgba(255,255,255,0.15); border-radius: 6px;
-      padding: 6px 12px; color: rgba(255,255,255,0.7); font-size: 12px; cursor: pointer; }
-    .btn-outline-sm:hover { border-color: #6366f1; color: #818cf8; }
+    .nb-editor-marker { position: absolute; top: 10px; right: 80px; z-index: 1000; background: var(--Y); border: 3px solid var(--K); padding: 4px 12px; font-weight: 900; font-size: 11px; box-shadow: 4px 4px 0 var(--K); pointer-events: none; }
+    .editor-shell { display: flex; height: 100vh; background: var(--W); color: var(--K); overflow: hidden; font-family: 'Space Grotesk', sans-serif; position: relative; }
+
+    /* ── Sidebar ── */
+    .nb-sidebar { width: 280px; border-right: 4px solid var(--K); background: var(--O); display: flex; flex-direction: column; flex-shrink: 0; }
+    .brand-box { height: 60px; background: var(--K); display: flex; align-items: center; padding: 0 20px; gap: 10px; border-bottom: 4px solid var(--Y); }
+    .nb-bolt { width: 30px; height: 30px; background: var(--Y); border: 2px solid rgba(255,255,255,0.2); display: flex; align-items: center; justify-content: center; font-weight: 900; font-size: 14px; }
+    .nb-name { font-family: 'Bebas Neue', sans-serif; font-size: 22px; color: var(--W); letter-spacing: 1px; }
+    .nb-name-accent { color: var(--Y); }
+
+    .sidebar-header { padding: 18px 20px; border-bottom: 4px solid var(--K); display: flex; align-items: center; justify-content: space-between; background: var(--Y); }
+    .p-name { font-weight: 800; font-size: 13px; text-transform: uppercase; letter-spacing: 0.5px; overflow: hidden; text-overflow: ellipsis; color: var(--K); }
+    .plus { width: 32px; height: 32px; background: var(--W); border: 3px solid var(--K); font-weight: 800; cursor: pointer; box-shadow: 3px 3px 0 var(--K); display: flex; align-items: center; justify-content: center; font-size: 18px; }
+    .plus:hover { transform: translate(-1px, -1px); box-shadow: 4px 4px 0 var(--K); }
+
+    .file-scroller { flex: 1; overflow-y: auto; padding: 12px; display: flex; flex-direction: column; gap: 6px; }
+    .file-node { display: flex; align-items: center; gap: 12px; padding: 12px 16px; cursor: pointer; font-weight: 700; font-size: 14px; position: relative; border: 3px solid transparent; transition: all .15s; }
+    .file-node:hover { background: rgba(0,0,0,0.06); }
+    .file-node.active { background: var(--W); border-color: var(--K); box-shadow: 4px 4px 0 var(--K); }
+    .active-indicator { position: absolute; left: 0; top: 12px; bottom: 12px; width: 4px; background: var(--B); }
+    .sidebar-footer { padding: 20px; border-top: 4px solid var(--K); background: var(--W); }
+
+    /* ── Main ── */
+    .nb-main { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+    .nb-toolbar { height: 60px; display: flex; align-items: center; border-bottom: 4px solid var(--K); background: var(--W); padding: 0 20px; justify-content: space-between; position: relative; z-index: 10; }
+    .nb-tabs { display: flex; height: 100%; align-items: flex-end; gap: 8px; }
+    .nb-tab { display: flex; align-items: center; gap: 10px; padding: 10px 24px; border: 4px solid var(--K); border-bottom: none; background: var(--O); font-weight: 800; font-size: 14px; transform: translateY(4px); }
+
+    .toolbar-actions { display: flex; gap: 12px; }
+    .nb-action-btn { width: 42px; height: 42px; border: 4px solid var(--K); background: var(--W); cursor: pointer; box-shadow: 4px 4px 0 var(--K); display: flex; align-items: center; justify-content: center; font-size: 18px; transition: all .1s; }
+    .nb-action-btn:hover { transform: translate(-2px, -2px); box-shadow: 6px 6px 0 var(--K); }
+    .nb-action-btn:active { transform: translate(2px, 2px); box-shadow: 2px 2px 0 var(--K); }
+    .nb-action-btn:disabled { opacity: 0.4; cursor: not-allowed; box-shadow: none; transform: none; }
+    .nb-action-btn.run { background: var(--G); }
+    .nb-action-btn.active { background: var(--B); color: #fff; }
+
+    .editor-body { flex: 1; display: flex; flex-direction: column; overflow: hidden; position: relative; }
+    .editor-container { flex: 1; background: #fff; position: relative; }
+    .nb-textarea { width: 100%; height: 100%; border: none; padding: 32px; font-family: 'JetBrains Mono', monospace; font-size: 16px; line-height: 1.6; color: #1a1a1a; outline: none; resize: none; background: #fafafa; }
+
+    /* ── Console ── */
+    .nb-console { border-top: 4px solid var(--K); background: var(--W); transition: all .2s cubic-bezier(0.4, 0, 0.2, 1); }
+    .nb-console.collapsed { height: 56px; }
+    .console-header { height: 56px; padding: 0 24px; display: flex; align-items: center; justify-content: space-between; cursor: pointer; background: var(--K); color: #fff; }
+    .terminal-icon { font-family: 'JetBrains Mono', monospace; font-weight: 900; color: var(--G); font-size: 18px; }
+    .console-header .label { font-weight: 900; font-size: 13px; letter-spacing: 2px; }
+    .status-chip { font-size: 10px; font-weight: 900; padding: 3px 10px; border: 2px solid #444; text-transform: uppercase; letter-spacing: 1px; }
+    .status-chip.running { background: var(--Y); color: var(--K); border-color: var(--Y); }
+    .status-chip.completed { background: var(--G); color: #fff; border-color: var(--G); }
+
+    .console-body { padding: 20px; background: #0A0A0A; height: 320px; display: flex; flex-direction: column; gap: 16px; }
+    .input-row { display: flex; align-items: center; gap: 12px; border: 4px solid var(--W); background: #111; padding: 6px 12px; }
+    .prompt { font-family: 'JetBrains Mono', monospace; font-weight: 800; color: var(--G); font-size: 13px; }
+    .console-input { flex: 1; border: none; outline: none; font-family: 'JetBrains Mono', monospace; font-size: 14px; background: transparent; color: #fff; }
+    .run-btn { height: 40px; padding: 0 24px; }
+    .output-area { flex: 1; border: 4px solid #333; background: #000; color: #eee; padding: 16px; font-family: 'JetBrains Mono', monospace; font-size: 14px; overflow-y: auto; }
+    .output-hdr { display: flex; gap: 24px; font-size: 11px; font-weight: 800; color: #666; margin-bottom: 12px; border-bottom: 1px solid #222; padding-bottom: 8px; }
+    .output-area pre { margin: 0; white-space: pre-wrap; line-height: 1.5; }
+    .output-area .error-out { color: var(--R); }
+    .output-area .placeholder { color: #444; font-weight: 700; display: flex; flex-direction: column; justify-content: center; align-items: center; height: 100%; gap: 8px; }
+
+    /* ── Right Panel ── */
+    .nb-right-panel { width: 360px; border-left: 4px solid var(--K); background: var(--W); display: flex; flex-direction: column; flex-shrink: 0; }
+    .rp-header { padding: 24px; border-bottom: 4px solid var(--K); background: var(--B); color: #fff; display: flex; align-items: center; justify-content: space-between; }
+    .rp-header .label { font-weight: 900; font-size: 16px; letter-spacing: 2px; }
+    .close-btn { background: none; border: none; color: #fff; font-size: 24px; cursor: pointer; font-weight: 900; }
+
+    .rp-content { flex: 1; overflow-y: auto; padding: 20px; background: var(--O); }
+    .nb-comment-card, .nb-version-card { border: 4px solid var(--K); background: var(--W); padding: 20px; margin-bottom: 16px; box-shadow: 6px 6px 0 var(--K); }
+    .c-meta, .v-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
+    .c-user { font-weight: 900; font-size: 12px; color: var(--B); }
+    .c-line { font-size: 11px; font-weight: 900; color: #888; background: var(--O); padding: 2px 6px; }
+    .c-resolve { font-size: 10px; font-weight: 900; border: 2px solid var(--K); padding: 2px 8px; cursor: pointer; background: var(--Y); }
+    .c-text { font-size: 14px; color: #1a1a1a; line-height: 1.5; font-weight: 500; }
+    .c-text.resolved { text-decoration: line-through; opacity: 0.4; }
+
+    .nb-textarea-sm { width: 100%; border: 4px solid var(--K); padding: 12px; font-family: inherit; font-size: 14px; font-weight: 600; box-sizing: border-box; resize: vertical; }
+
+    .nb-btn-sm { border: 3px solid var(--K); padding: 8px 16px; font-weight: 800; font-size: 12px; cursor: pointer; box-shadow: 4px 4px 0 var(--K); text-transform: uppercase; transition: all .1s; }
+    .nb-btn-sm:hover { transform: translate(-1px, -1px); box-shadow: 5px 5px 0 var(--K); }
+    .btn-blue { background: var(--B); color: #fff; }
+    .btn-green { background: var(--G); color: #fff; }
+    .btn-yellow { background: var(--Y); color: var(--K); }
+    .btn-white { background: var(--W); color: var(--K); }
+    .w-full { width: 100%; }
+    .mt-8 { margin-top: 8px; }
+
+    /* ── Utils ── */
+    .flex { display: flex; }
+    .items-center { align-items: center; }
+    .gap-12 { gap: 12px; }
+
+    /* ── Cursors ── */
+    .remote-cursor { position: absolute; pointer-events: none; }
+    .cursor-bar { width: 3px; height: 24px; background: var(--Y); }
+    .cursor-label { position: absolute; top: -20px; left: 0; background: var(--Y); color: var(--K); font-size: 11px; font-weight: 900; padding: 2px 8px; white-space: nowrap; border: 2px solid var(--K); box-shadow: 2px 2px 0 var(--K); }
   `]
 })
 export class EditorComponent implements OnInit, OnDestroy, AfterViewInit {
@@ -245,7 +297,7 @@ export class EditorComponent implements OnInit, OnDestroy, AfterViewInit {
 
   private subs: Subscription[] = [];
   private changeTimer: any;
-  private sessionId: string | null = null;
+  public sessionId: string | null = null;
 
   ngOnInit(): void {
     this.projectId = Number(this.route.snapshot.paramMap.get('projectId'));
@@ -423,6 +475,14 @@ export class EditorComponent implements OnInit, OnDestroy, AfterViewInit {
 
   getCursorTop(line: number): string { return `${line * 20}px`; }
   getCursorLeft(col: number): string { return `${col * 8.4}px`; }
+
+  getLangColor(lang: string): string {
+    const m: Record<string, string> = {
+      java: '#FFD600', python: '#1A6FFF', javascript: '#FFD600',
+      typescript: '#1A6FFF', cpp: '#FF2D2D', go: '#00C853'
+    };
+    return m[lang?.toLowerCase()] || '#DDD';
+  }
 
   ngOnDestroy(): void {
     this.subs.forEach(s => s.unsubscribe());

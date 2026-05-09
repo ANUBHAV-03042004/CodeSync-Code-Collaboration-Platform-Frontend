@@ -5,6 +5,7 @@ import { gsap } from 'gsap';
 import { ProjectService } from '../../services/project.service';
 import { AuthService } from '../../services/auth.service';
 import { ExecutionService } from '../../services/other-services';
+import { ToastService } from '../../shared/components/toast/toast.service';
 import { Project, User } from '../../core/models';
 
 const LANG_COLORS: Record<string,string> = {
@@ -127,7 +128,7 @@ const LANG_COLORS: Record<string,string> = {
               <div class="pc-foot">
                 <span>⭐ {{ p.starCount }}</span>
                 <span>🍴 {{ p.forkCount }}</span>
-                <button class="fork-btn" (click)="fork(p.projectId, $event)">⑂ Fork</button>
+                <button class="fork-btn" (click)="fork(p, $event)">⑂ {{ isForked(p) ? 'Unfork' : 'Fork' }}</button>
               </div>
             </div>
           </div>
@@ -268,11 +269,24 @@ export class DashboardComponent implements OnInit, AfterViewInit {
 
   openProject(id: number): void { this.router.navigate(['/projects', id]); }
 
-  fork(id: number, e: Event): void {
+  isForked(p: Project): boolean {
+    return !!(p.forkedBy && this.user && p.forkedBy.includes(this.user.userId));
+  }
+
+  fork(p: Project, e: Event): void {
     e.stopPropagation();
-    this.projectSvc.fork(id).subscribe(()=>{
-      const user = this.authSvc.getCurrentUser();
-      if (user) this.projectSvc.getByOwner(user.userId).subscribe(p=>this.myProjects=p.slice(0,6));
+    const wasForked = this.isForked(p);
+    this.projectSvc.fork(p.projectId).subscribe({
+      next: () => {
+        const msg = wasForked ? 'Fork Deleted!' : 'Project Forked Successfully!';
+        const toast = inject(ToastService);
+        toast.success(msg);
+        this.ngOnInit(); // Refresh
+      },
+      error: () => {
+        const toast = inject(ToastService);
+        toast.error('Fork operation failed');
+      }
     });
   }
 

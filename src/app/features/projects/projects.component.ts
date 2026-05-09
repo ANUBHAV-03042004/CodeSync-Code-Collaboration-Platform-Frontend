@@ -15,92 +15,118 @@ import { Project, CodeFile } from '../../core/models';
   standalone: true,
   imports: [CommonModule, FormsModule, RouterLink],
   template: `
-    <div class="page" #page>
-      <div class="page-hdr">
-        <h1 class="bb">Projects</h1>
-        <div class="hdr-right">
-          <div class="search-box">
-            <span class="s-ic">&#128269;</span>
-            <input [(ngModel)]="searchQuery" (input)="onSearch()" placeholder="Search projects…" class="s-inp" />
-            <button class="s-clr" *ngIf="searchQuery" (click)="searchQuery='';onSearch()">X</button>
-          </div>
-          <button routerLink="/projects/new" class="nb-btn yb">+ New Project</button>
+    <div class="nb-page" #page>
+      <!-- Brand Ticker -->
+      <div class="nb-ticker">
+        <div class="ticker-wrap">
+          <span *ngFor="let i of [1,2,3,4,5,6]">NEO-BRUTALIST CODE SYNC // BUILD FAST // BREAK NOTHING // </span>
         </div>
       </div>
-      <div class="tab-bar">
-        <button class="tab" [class.active]="tab==='mine'" (click)="setTab('mine')">My Projects ({{myProjects.length}})</button>
-        <button class="tab" [class.active]="tab==='member'" (click)="setTab('member')">Member Of ({{memberProjects.length}})</button>
-        <button class="tab" [class.active]="tab==='public'" (click)="setTab('public')">Explore ({{publicProjects.length}})</button>
-      </div>
-      <div class="search-info" *ngIf="searchQuery">Showing {{displayed.length}} result(s) for "{{searchQuery}}"</div>
-      <div class="projects-grid" #grid>
-        <div class="pc" *ngFor="let p of displayed" (click)="open(p.projectId)">
-          <div class="pc-bar" [style.background]="getLangColor(p.language)"></div>
-          <div class="pc-top">
-            <span class="lb" [style.background]="getLangColor(p.language)">{{p.language}}</span>
-            <span class="vb" [class.pub]="p.visibility==='PUBLIC'">{{p.visibility}}</span>
-            <span class="ab" *ngIf="p.archived">Archived</span>
+
+      <div class="page-hdr">
+        <h1 class="main-title">PROJECTS</h1>
+        <div class="hdr-right">
+          <div class="search-box">
+            <span class="s-ic">🔍</span>
+            <input [(ngModel)]="searchQuery" (input)="onSearch()" placeholder="SEARCH PROJECTS..." class="s-inp" />
           </div>
-          <h3>{{p.name}}</h3>
-          <p class="pdesc">{{p.description||'No description.'}}</p>
-          <div class="pc-foot">
-            <span>&#11088; {{p.starCount}}</span>
-            <span>&#127860; {{p.forkCount}}</span>
-            <div class="ca">
-              <button class="ib sb" (click)="star(p.projectId,$event)">&#11088;</button>
-              <button class="ib fb" (click)="fork(p.projectId,$event)">&#127860;</button>
+          <button routerLink="/projects/new" class="nb-btn btn-yellow">+ NEW PROJECT</button>
+        </div>
+      </div>
+
+      <div class="tab-bar">
+        <button class="tab" [class.active]="tab==='mine'" (click)="setTab('mine')">MY STUFF ({{myProjects.length}})</button>
+        <button class="tab" [class.active]="tab==='member'" (click)="setTab('member')">SHARED ({{memberProjects.length}})</button>
+        <button class="tab" [class.active]="tab==='public'" (click)="setTab('public')">EXPLORE ({{publicProjects.length}})</button>
+      </div>
+
+      <div class="projects-grid" #grid>
+        <div class="pc-card" *ngFor="let p of displayed" (click)="open(p.projectId)">
+          <div class="pc-accent" [style.background]="getLangColor(p.language)"></div>
+          <div class="pc-content">
+            <div class="pc-top">
+              <span class="nb-badge small" [style.background]="getLangColor(p.language)">{{p.language}}</span>
+              <span class="nb-badge small" [class.blue]="p.visibility==='PRIVATE'" [class.green]="p.visibility==='PUBLIC'">{{p.visibility}}</span>
+            </div>
+            <h3 class="pc-title">{{p.name}}</h3>
+            <p class="pc-desc">{{p.description||'No description provided.'}}</p>
+            <div class="pc-foot">
+              <div class="stats">
+                <span>★ {{p.starCount}}</span>
+                <span>🍴 {{p.forkCount}}</span>
+              </div>
+              <div class="actions">
+                <button class="nb-btn-sm" [class.active]="isStarred(p)" (click)="star(p, $event)">
+                  {{ isStarred(p) ? '★' : '☆' }}
+                </button>
+                <button class="nb-btn-sm" [class.active]="isForked(p)" (click)="fork(p, $event)">
+                  🍴
+                </button>
+              </div>
             </div>
           </div>
         </div>
-        <div class="empty" *ngIf="!displayed.length">
-          <div style="font-size:48px">{{searchQuery?'&#128269;':'&#128194;'}}</div>
-          <p>{{searchQuery?'No results for '+searchQuery:'No projects here yet.'}}</p>
-          <a routerLink="/projects/new" class="nb-btn yb" *ngIf="!searchQuery">Create First Project</a>
-          <button class="nb-btn ob" (click)="searchQuery='';onSearch()" *ngIf="searchQuery">Clear Search</button>
-        </div>
+      </div>
+
+      <div class="empty-state" *ngIf="!displayed.length">
+        <div class="empty-icon">📭</div>
+        <p>NOTHING FOUND HERE.</p>
+        <button class="nb-btn btn-white" (click)="searchQuery='';onSearch()" *ngIf="searchQuery">CLEAR SEARCH</button>
       </div>
     </div>
   `,
   styles: [`
-    .page{padding:32px;max-width:1200px;margin:0 auto}
-    .page-hdr{display:flex;align-items:center;justify-content:space-between;margin-bottom:24px;flex-wrap:wrap;gap:12px}
-    h1.bb{font-family:'Bebas Neue',sans-serif;font-size:56px;letter-spacing:.05em;margin:0;color:#0A0A0A}
-    .hdr-right{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
-    .search-box{display:flex;align-items:center;border:3px solid #0A0A0A;box-shadow:4px 4px 0 #0A0A0A;background:#fff}
-    .search-box:focus-within{border-color:#1E88E5;box-shadow:4px 4px 0 #1E88E5}
-    .s-ic{padding:0 10px;font-size:14px}
-    .s-inp{border:none;outline:none;padding:10px 0;font-family:'Space Grotesk',sans-serif;font-size:13px;font-weight:600;background:transparent;color:#0A0A0A;width:200px}
-    .s-inp::placeholder{color:#aaa}
-    .s-clr{border:none;background:#0A0A0A;color:#FDD835;cursor:pointer;padding:0 10px;font-size:11px;font-weight:800;align-self:stretch}
-    .nb-btn{border:3px solid #0A0A0A;padding:10px 18px;font-family:'Space Grotesk',sans-serif;font-size:11px;font-weight:800;letter-spacing:1px;text-transform:uppercase;cursor:pointer;box-shadow:4px 4px 0 #0A0A0A;text-decoration:none;display:inline-flex;align-items:center;transition:transform .08s,box-shadow .08s}
-    .nb-btn:hover{transform:translate(-2px,-2px);box-shadow:6px 6px 0 #0A0A0A}
-    .yb{background:#FDD835;color:#0A0A0A}
-    .ob{background:#fff;color:#0A0A0A}
-    .tab-bar{display:flex;border-bottom:3px solid #0A0A0A;margin-bottom:20px}
-    .tab{background:transparent;border:none;color:#888;font-family:'Space Grotesk',sans-serif;font-size:11px;font-weight:800;letter-spacing:1px;text-transform:uppercase;padding:10px 18px;cursor:pointer;transition:all .15s;border-bottom:3px solid transparent;margin-bottom:-3px}
-    .tab.active{color:#0A0A0A;background:#FDD835;border-bottom-color:#0A0A0A}
-    .tab:hover:not(.active){color:#0A0A0A;background:rgba(0,0,0,.04)}
-    .search-info{background:#E3F2FD;border:3px solid #1E88E5;box-shadow:3px 3px 0 #1E88E5;padding:10px 16px;font-size:13px;font-weight:600;margin-bottom:16px}
-    .projects-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:16px}
-    .pc{border:3px solid #0A0A0A;background:#fff;cursor:pointer;box-shadow:5px 5px 0 #0A0A0A;transition:transform .1s,box-shadow .1s;display:flex;flex-direction:column;overflow:hidden}
-    .pc:hover{transform:translate(-3px,-3px);box-shadow:8px 8px 0 #0A0A0A;background:#FFFDE7}
-    .pc-bar{height:6px;width:100%;flex-shrink:0}
-    .pc-top{display:flex;align-items:center;gap:6px;padding:14px 16px 0;flex-wrap:wrap}
-    .lb{color:#fff;border:2px solid #0A0A0A;padding:2px 8px;font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:1px}
-    .vb{border:2px solid #0A0A0A;padding:2px 8px;font-size:10px;font-weight:800;text-transform:uppercase;background:#eee;color:#555}
-    .vb.pub{background:#43A047;color:#fff}
-    .ab{background:#FB8C00;color:#fff;border:2px solid #0A0A0A;padding:2px 8px;font-size:10px;font-weight:800;text-transform:uppercase}
-    .pc h3{font-size:16px;font-weight:800;margin:10px 16px 6px;color:#0A0A0A}
-    .pdesc{font-size:13px;color:#555;margin:0 16px auto;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;line-height:1.5;padding-bottom:12px;flex:1}
-    .pc-foot{display:flex;align-items:center;gap:8px;font-size:12px;font-weight:700;color:#555;border-top:2px solid #0A0A0A;padding:10px 16px}
-    .ca{margin-left:auto;display:flex;gap:4px}
-    .ib{border:2px solid #0A0A0A;cursor:pointer;padding:4px 8px;font-size:11px;font-weight:800;transition:background .1s,transform .08s}
-    .ib:hover{transform:translate(-1px,-1px)}
-    .sb{background:#FDD835;color:#0A0A0A}
-    .fb{background:#1E88E5;color:#fff}
-    .empty{text-align:center;padding:60px 20px;grid-column:1/-1;border:3px dashed #ccc}
-    .empty p{font-weight:700;margin-bottom:16px;font-size:15px;color:#555}
-    @media(max-width:600px){.page{padding:16px} h1.bb{font-size:38px} .s-inp{width:130px}}
+    .nb-page { padding: 48px 24px; max-width: 1200px; margin: 0 auto; }
+    
+    .nb-ticker { background: var(--K); color: var(--Y); overflow: hidden; white-space: nowrap; padding: 12px 0; border: 4px solid var(--K); transform: rotate(-1deg) scale(1.05); margin-bottom: 60px; box-shadow: 8px 8px 0 var(--K); }
+    .ticker-wrap { display: inline-block; animation: ticker 20s linear infinite; font-weight: 900; font-size: 14px; letter-spacing: 2px; }
+    @keyframes ticker { 0% { transform: translateX(0); } 100% { transform: translateX(-50%); } }
+
+    .page-hdr { display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 40px; flex-wrap: wrap; gap: 20px; }
+    .main-title { font-family: 'Bebas Neue', sans-serif; font-size: 84px; line-height: 0.8; margin: 0; color: var(--K); letter-spacing: 2px; }
+    
+    .hdr-right { display: flex; gap: 20px; align-items: center; }
+    .search-box { border: 4px solid var(--K); background: var(--W); display: flex; align-items: center; padding: 0 16px; box-shadow: 6px 6px 0 var(--K); }
+    .s-inp { border: none; outline: none; padding: 14px 0; font-family: 'Space Grotesk', sans-serif; font-weight: 800; font-size: 14px; width: 240px; text-transform: uppercase; }
+    .s-ic { margin-right: 12px; font-size: 18px; }
+
+    .tab-bar { display: flex; gap: 8px; margin-bottom: 32px; border-bottom: 4px solid var(--K); }
+    .tab { border: 4px solid var(--K); border-bottom: none; padding: 12px 24px; font-weight: 800; cursor: pointer; background: var(--O); transform: translateY(4px); transition: all .1s; }
+    .tab.active { background: var(--Y); transform: translateY(0); box-shadow: 4px -4px 0 var(--K); }
+
+    .projects-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(340px, 1fr)); gap: 32px; }
+    .pc-card { border: 4px solid var(--K); background: var(--W); box-shadow: 8px 8px 0 var(--K); cursor: pointer; transition: all .15s; display: flex; flex-direction: column; overflow: hidden; }
+    .pc-card:hover { transform: translate(-4px, -4px); box-shadow: 12px 12px 0 var(--K); }
+    .pc-accent { height: 12px; border-bottom: 4px solid var(--K); }
+    .pc-content { padding: 24px; flex: 1; display: flex; flex-direction: column; }
+    .pc-top { display: flex; gap: 10px; margin-bottom: 16px; }
+    .pc-title { font-size: 24px; font-weight: 800; margin: 0 0 12px; text-transform: uppercase; color: var(--K); }
+    .pc-desc { font-size: 16px; color: #555; line-height: 1.4; margin-bottom: 24px; flex: 1; }
+    
+    .pc-foot { display: flex; justify-content: space-between; align-items: center; border-top: 4px solid var(--K); padding-top: 16px; margin-top: auto; }
+    .stats { display: flex; gap: 16px; font-weight: 800; font-size: 14px; }
+    .actions { display: flex; gap: 8px; }
+
+    .nb-badge { padding: 4px 12px; border: 3px solid var(--K); font-size: 10px; font-weight: 800; text-transform: uppercase; background: var(--W); box-shadow: 3px 3px 0 var(--K); }
+    .nb-badge.blue { background: var(--B); color: #fff; }
+    .nb-badge.green { background: var(--G); color: #fff; }
+    .small { font-size: 9px; padding: 2px 8px; }
+
+    .nb-btn { border: 4px solid var(--K); padding: 14px 24px; font-weight: 800; cursor: pointer; box-shadow: 6px 6px 0 var(--K); transition: all .1s; text-transform: uppercase; text-decoration: none; display: inline-flex; align-items: center; justify-content: center; }
+    .nb-btn:active { transform: translate(2px, 2px); box-shadow: 4px 4px 0 var(--K); }
+    .btn-yellow { background: var(--Y); }
+    .btn-white { background: var(--W); }
+
+    .nb-btn-sm { border: 3px solid var(--K); width: 36px; height: 36px; display: flex; align-items: center; justify-content: center; background: var(--W); cursor: pointer; box-shadow: 3px 3px 0 var(--K); font-weight: 800; }
+    .nb-btn-sm.active { background: var(--K); color: var(--W); }
+
+    .empty-state { text-align: center; padding: 100px 0; border: 4px dashed var(--K); grid-column: 1/-1; }
+    .empty-icon { font-size: 64px; margin-bottom: 20px; }
+    
+    @media (max-width: 768px) {
+      .main-title { font-size: 56px; }
+      .projects-grid { grid-template-columns: 1fr; }
+    }
   `]
 })
 export class ProjectListComponent implements OnInit, AfterViewInit {
@@ -154,17 +180,35 @@ export class ProjectListComponent implements OnInit, AfterViewInit {
 
   open(id: number): void { this.router.navigate(['/projects', id]); }
 
-  star(id: number, e: Event): void {
-    e.stopPropagation();
-    this.projectSvc.star(id).subscribe(() => this.toast.success('Starred!'));
+  isStarred(p: Project): boolean {
+    const user = this.authSvc.getCurrentUser();
+    return !!(p.starredBy && user && p.starredBy.includes(user.userId));
   }
 
-  fork(id: number, e: Event): void {
+  isForked(p: Project): boolean {
+    const user = this.authSvc.getCurrentUser();
+    return !!(p.forkedBy && user && p.forkedBy.includes(user.userId));
+  }
+
+  star(p: Project, e: Event): void {
     e.stopPropagation();
-    this.projectSvc.fork(id).subscribe(() => {
-      this.toast.success('Project forked!');
+    const wasStarred = this.isStarred(p);
+    this.projectSvc.star(p.projectId).subscribe(() => {
+      this.toast.success(wasStarred ? 'Removed from Stars!' : 'Project Starred!');
       const user = this.authSvc.getCurrentUser();
-      if (user) this.projectSvc.getByOwner(user.userId).subscribe(p => { this.myProjects = p; this.updateDisplayed(); });
+      if (user) this.projectSvc.getByOwner(user.userId).subscribe(projs => { this.myProjects = projs; this.updateDisplayed(); });
+      this.projectSvc.getPublic().subscribe(projs => this.publicProjects = projs);
+    });
+  }
+
+  fork(p: Project, e: Event): void {
+    e.stopPropagation();
+    const wasForked = this.isForked(p);
+    this.projectSvc.fork(p.projectId).subscribe(() => {
+      this.toast.success(wasForked ? 'Fork Deleted!' : 'Project Forked Successfully!');
+      const user = this.authSvc.getCurrentUser();
+      if (user) this.projectSvc.getByOwner(user.userId).subscribe(projs => { this.myProjects = projs; this.updateDisplayed(); });
+      this.projectSvc.getPublic().subscribe(projs => this.publicProjects = projs);
     });
   }
 
@@ -303,117 +347,339 @@ export class ProjectCreateComponent implements AfterViewInit {
   imports: [CommonModule, RouterLink],
   template: `
     <div class="page" *ngIf="project">
-      <div class="project-hero" #hero>
-        <div class="hero-left">
+      <!-- High-Visibility Marker -->
+      <div class="nb-dev-banner">NEO-BRUTALIST PROJECT DETAIL ACTIVE</div>
+      <!-- Top Banner / Hero -->
+      <div class="nb-hero" #hero>
+        <div class="hero-content">
           <div class="breadcrumbs">
-            <a routerLink="/projects">Projects</a> / {{ project.name }}
+            <a routerLink="/projects">PROJECTS</a> / <span class="active">{{ project.name }}</span>
           </div>
-          <h1>{{ project.name }}</h1>
-          <p class="description">{{ project.description || 'No description provided.' }}</p>
+          <h1 class="bb main-title">{{ project.name }}</h1>
+          <p class="desc">{{ project.description || 'No description provided for this project.' }}</p>
+
           <div class="badges">
-            <span class="lang-badge">{{ project.language }}</span>
-            <span class="vis-badge" [class.public]="project.visibility === 'PUBLIC'">{{ project.visibility }}</span>
-            <span class="archived-badge" *ngIf="project.archived">Archived</span>
-          </div>
-          <div class="meta">
-            <span>⭐ {{ project.starCount }} stars</span>
-            <span>🍴 {{ project.forkCount }} forks</span>
-            <span>👥 {{ (project.memberIds || []).length }} members</span>
+            <span class="nb-badge lang-badge" [style.background]="getLangColor(project.language)">{{ project.language }}</span>
+            <span class="nb-badge vis-badge" [class.blue]="project.visibility === 'PRIVATE'" [class.green]="project.visibility === 'PUBLIC'">
+              {{ project.visibility }}
+            </span>
+            <span class="nb-badge red-badge" *ngIf="project.archived">ARCHIVED</span>
           </div>
         </div>
+
         <div class="hero-actions">
-          <button class="btn-primary" [routerLink]="['/editor', project.projectId]">Open Editor</button>
-          <button class="btn-outline" (click)="star()">⭐ Star</button>
-          <button class="btn-outline" (click)="fork()">🍴 Fork</button>
+          <button class="nb-btn btn-blue main-cta" [routerLink]="['/editor', project.projectId]">
+            OPEN EDITOR <span class="arr">↗</span>
+          </button>
+          <div class="social-row">
+            <button class="nb-btn btn-yellow flex-1" (click)="star()" [class.active]="isStarred">
+              {{ isStarred ? '★ UNSTAR' : '☆ STAR' }}
+            </button>
+            <button class="nb-btn btn-white flex-1" (click)="fork()" [class.active]="isForked">
+              {{ isForked ? '🍴 UNFORK' : '🍴 FORK' }}
+            </button>
+          </div>
         </div>
       </div>
 
-      <!-- Files -->
-      <div class="section" #filesSection>
-        <h2>Files</h2>
-        <div class="file-list">
-          <div class="file-row" *ngFor="let f of files">
-            <span class="file-icon">{{ getIcon(f.language) }}</span>
-            <span class="file-name">{{ f.name }}</span>
-            <span class="file-path">{{ f.path }}</span>
-            <span class="file-lang">{{ f.language }}</span>
+      <!-- Stats Grid -->
+      <div class="stats-grid" #stats>
+        <div class="stat-card">
+          <div class="val">{{ project.starCount }}</div>
+          <div class="lbl">STARS</div>
+        </div>
+        <div class="stat-card">
+          <div class="val">{{ project.forkCount }}</div>
+          <div class="lbl">FORKS</div>
+        </div>
+        <div class="stat-card">
+          <div class="val">{{ (project.memberIds || []).length }}</div>
+          <div class="lbl">MEMBERS</div>
+        </div>
+        <div class="stat-card">
+          <div class="val">{{ files.length }}</div>
+          <div class="lbl">FILES</div>
+        </div>
+      </div>
+
+      <!-- Content Row -->
+      <div class="content-row">
+        <div class="main-col" #mainCol>
+          <div class="nb-card">
+            <div class="nb-card-hdr yellow-hdr">
+              <span class="card-label">PROJECT FILES</span>
+              <div class="hdr-accent"></div>
+            </div>
+            <div class="file-list">
+              <div class="file-row" *ngFor="let f of files">
+                <span class="f-icon">{{ getIcon(f.language) }}</span>
+                <div class="f-info">
+                  <span class="f-name">{{ f.name }}</span>
+                  <span class="f-path">{{ f.path }}</span>
+                </div>
+                <span class="f-lang">{{ f.language }}</span>
+              </div>
+              <div class="empty-files" *ngIf="!files.length">
+                <div class="empty-icon">📭</div>
+                <p>No files found. Launch the editor to start coding!</p>
+              </div>
+            </div>
           </div>
-          <div class="empty-files" *ngIf="!files.length">No files yet. Open the editor to create files.</div>
+        </div>
+
+        <!-- Sidebar / Info -->
+        <div class="side-col" #sideCol>
+          <div class="nb-card mb-24">
+            <div class="nb-card-hdr blue-hdr">
+              <span class="card-label">ABOUT</span>
+            </div>
+            <div class="card-body">
+              <div class="info-item">
+                <label>OWNER</label>
+                <div class="owner-tag">USER #{{ project.ownerId }}</div>
+              </div>
+              <div class="info-item">
+                <label>CREATED</label>
+                <div>{{ project.createdAt | date:'MMMM d, y' }}</div>
+              </div>
+              <div class="info-item">
+                <label>LATEST UPDATE</label>
+                <div>{{ project.updatedAt | date:'medium' }}</div>
+              </div>
+            </div>
+          </div>
+
+          <div class="nb-card mb-24">
+            <div class="nb-card-hdr green-hdr">
+              <span class="card-label">COLLABORATORS</span>
+            </div>
+            <div class="collab-list">
+              <div class="collab-item" *ngFor="let mid of project.memberIds">
+                <div class="avatar-sm">U{{ mid }}</div>
+                <span>User #{{ mid }}</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Danger Zone -->
+          <div class="nb-card danger-card" *ngIf="currentUser?.userId === project.ownerId">
+            <div class="nb-card-hdr red-hdr">
+              <span class="card-label">DANGER ZONE</span>
+            </div>
+            <div class="card-body">
+              <p class="danger-text">Permanently delete this project and all its files.</p>
+              <button class="nb-btn btn-red w-full" (click)="deleteProject()">
+                DELETE PROJECT
+              </button>
+            </div>
+          </div>
         </div>
       </div>
     </div>
-    <div class="loading" *ngIf="!project">Loading…</div>
+
+    <div class="loading-wrap" *ngIf="!project">
+      <div class="nb-loader"></div>
+      <p>FETCHING PROJECT DATA...</p>
+    </div>
   `,
   styles: [`
-    .page { padding: 32px; max-width: 1100px; margin: 0 auto; }
-    .loading { color: rgba(255,255,255,0.5); text-align: center; padding: 60px; }
-    .project-hero { display: flex; align-items: flex-start; justify-content: space-between;
-      gap: 24px; margin-bottom: 40px; padding-bottom: 32px;
-      border-bottom: 1px solid rgba(255,255,255,0.08); }
-    .breadcrumbs { color: rgba(255,255,255,0.4); font-size: 13px; margin-bottom: 12px; }
-    .breadcrumbs a { color: #818cf8; text-decoration: none; }
-    h1 { color: #fff; font-size: 28px; margin: 0 0 8px; }
-    .description { color: rgba(255,255,255,0.6); font-size: 15px; margin: 0 0 16px; }
-    .badges { display: flex; gap: 8px; margin-bottom: 16px; flex-wrap: wrap; }
-    .lang-badge { background: rgba(99,102,241,0.2); color: #818cf8; border-radius: 6px; padding: 3px 10px; font-size: 13px; }
-    .vis-badge { border-radius: 6px; padding: 3px 10px; font-size: 13px; background: rgba(255,255,255,0.08); color: rgba(255,255,255,0.5); }
-    .vis-badge.public { background: rgba(34,197,94,0.15); color: #4ade80; }
-    .archived-badge { background: rgba(245,158,11,0.15); color: #fbbf24; border-radius: 6px; padding: 3px 10px; font-size: 12px; }
-    .meta { display: flex; gap: 24px; color: rgba(255,255,255,0.5); font-size: 13px; }
-    .hero-actions { display: flex; flex-direction: column; gap: 10px; min-width: 160px; }
-    .btn-primary { background: linear-gradient(135deg,#6366f1,#8b5cf6); border: none;
-      border-radius: 10px; padding: 12px 20px; color: #fff; font-size: 14px; font-weight: 600;
-      cursor: pointer; text-align: center; text-decoration: none; }
-    .btn-outline { background: none; border: 1px solid rgba(255,255,255,0.15); border-radius: 10px;
-      padding: 10px 20px; color: rgba(255,255,255,0.7); font-size: 14px; cursor: pointer;
-      transition: border-color 0.2s; }
-    .btn-outline:hover { border-color: #6366f1; }
-    .section h2 { color: #fff; font-size: 20px; margin: 0 0 16px; }
-    .file-list { background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08);
-      border-radius: 12px; overflow: hidden; }
-    .file-row { display: flex; align-items: center; gap: 12px; padding: 12px 16px; font-size: 13px;
-      border-bottom: 1px solid rgba(255,255,255,0.05); transition: background 0.15s; }
+    .nb-dev-banner { background: var(--Y); color: var(--K); font-weight: 900; text-align: center; padding: 12px; border: 4px solid var(--K); margin-bottom: 24px; font-size: 14px; letter-spacing: 2px; box-shadow: 6px 6px 0 var(--K); }
+    .page { padding: 48px 24px; max-width: 1200px; margin: 0 auto; min-height: 100vh; }
+
+    /* ── Hero ── */
+    .nb-hero { display: flex; justify-content: space-between; gap: 48px; margin-bottom: 48px; flex-wrap: wrap; align-items: flex-start; }
+    .hero-content { flex: 1; min-width: 320px; }
+    .breadcrumbs { font-size: 11px; font-weight: 800; color: #888; margin-bottom: 12px; letter-spacing: 2px; }
+    .breadcrumbs a { color: var(--B); text-decoration: none; border-bottom: 2px solid transparent; }
+    .breadcrumbs a:hover { border-bottom-color: var(--B); }
+    .breadcrumbs .active { color: var(--K); }
+
+    h1.main-title { font-family: 'Bebas Neue', sans-serif; font-size: 72px; margin: 0 0 16px; line-height: 0.9; letter-spacing: 1px; color: var(--K); text-transform: uppercase; }
+    .desc { font-size: 20px; color: #333; font-weight: 500; margin-bottom: 28px; max-width: 650px; line-height: 1.4; }
+
+    .badges { display: flex; gap: 12px; }
+    .nb-badge { padding: 6px 14px; border: 3px solid var(--K); font-size: 11px; font-weight: 800; text-transform: uppercase; background: var(--W); box-shadow: 4px 4px 0 var(--K); letter-spacing: 1px; }
+    .nb-badge.blue { background: var(--B); color: #fff; }
+    .nb-badge.green { background: var(--G); color: #fff; }
+    .nb-badge.red-badge { background: var(--R); color: #fff; }
+
+    .hero-actions { display: flex; flex-direction: column; gap: 20px; width: 360px; }
+    .social-row { display: flex; gap: 16px; }
+    .nb-btn { border: 4px solid var(--K); padding: 16px 24px; font-weight: 800; font-family: 'Space Grotesk', sans-serif; cursor: pointer; font-size: 14px; box-shadow: 6px 6px 0 var(--K); transition: all .1s; text-transform: uppercase; text-decoration: none; display: inline-flex; align-items: center; justify-content: center; gap: 10px; }
+    .nb-btn:hover { transform: translate(-2px, -2px); box-shadow: 8px 8px 0 var(--K); }
+    .nb-btn:active { transform: translate(2px, 2px); box-shadow: 4px 4px 0 var(--K); }
+    .nb-btn.active { background: var(--K) !important; color: #fff !important; }
+
+    .btn-blue { background: var(--B); color: #fff; }
+    .btn-yellow { background: var(--Y); color: var(--K); }
+    .btn-white { background: var(--W); color: var(--K); }
+    .btn-red { background: var(--R); color: #fff; }
+    .main-cta { font-size: 20px; padding: 22px; }
+    .flex-1 { flex: 1; }
+    .w-full { width: 100%; }
+
+    /* ── Stats ── */
+    .stats-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 24px; margin-bottom: 48px; }
+    .stat-card { border: 4px solid var(--K); background: var(--W); padding: 24px; box-shadow: 8px 8px 0 var(--K); text-align: center; }
+    .stat-card .val { font-size: 40px; font-weight: 800; line-height: 1; margin-bottom: 6px; font-family: 'Bebas Neue', sans-serif; }
+    .stat-card .lbl { font-size: 11px; font-weight: 800; color: #666; letter-spacing: 2px; }
+
+    /* ── Content ── */
+    .content-row { display: grid; grid-template-columns: 1fr 340px; gap: 40px; }
+    .nb-card { border: 4px solid var(--K); background: var(--W); box-shadow: 8px 8px 0 var(--K); overflow: hidden; }
+    .nb-card-hdr { padding: 14px 24px; border-bottom: 4px solid var(--K); display: flex; align-items: center; gap: 14px; }
+    .yellow-hdr { background: var(--Y); }
+    .blue-hdr { background: var(--B); color: #fff; }
+    .green-hdr { background: var(--G); color: #fff; }
+    .red-hdr { background: var(--R); color: #fff; }
+    .card-label { font-size: 13px; font-weight: 800; letter-spacing: 2px; }
+    .hdr-accent { flex: 1; height: 4px; background: rgba(0,0,0,0.1); }
+
+    .file-list { display: flex; flex-direction: column; }
+    .file-row { display: flex; align-items: center; padding: 18px 24px; border-bottom: 3px solid var(--O); transition: background .15s; }
     .file-row:last-child { border-bottom: none; }
-    .file-row:hover { background: rgba(255,255,255,0.04); }
-    .file-icon { font-size: 16px; }
-    .file-name { color: #e2e8f0; font-weight: 500; }
-    .file-path { color: rgba(255,255,255,0.4); margin-left: 4px; font-family: monospace; }
-    .file-lang { margin-left: auto; background: rgba(99,102,241,0.15); color: #818cf8;
-      border-radius: 4px; padding: 2px 8px; font-size: 11px; }
-    .empty-files { color: rgba(255,255,255,0.4); text-align: center; padding: 32px; }
+    .file-row:hover { background: var(--O); }
+    .f-icon { font-size: 28px; margin-right: 20px; }
+    .f-info { flex: 1; display: flex; flex-direction: column; }
+    .f-name { font-weight: 800; font-size: 16px; color: var(--K); }
+    .f-path { font-size: 12px; color: #777; font-family: 'JetBrains Mono', monospace; }
+    .f-lang { font-size: 11px; font-weight: 800; padding: 3px 10px; border: 3px solid var(--K); text-transform: uppercase; background: var(--W); box-shadow: 3px 3px 0 var(--K); }
+
+    .card-body { padding: 24px; }
+    .info-item { margin-bottom: 20px; }
+    .info-item:last-child { margin-bottom: 0; }
+    .info-item label { display: block; font-size: 10px; font-weight: 800; color: #888; letter-spacing: 1.5px; margin-bottom: 6px; text-transform: uppercase; }
+    .info-item div { font-weight: 700; font-size: 15px; }
+    .owner-tag { color: var(--B); font-weight: 800 !important; }
+
+    .collab-list { padding: 16px; display: flex; flex-direction: column; gap: 8px; }
+    .collab-item { display: flex; align-items: center; gap: 14px; padding: 10px; border: 2px solid transparent; transition: all .1s; }
+    .collab-item:hover { border-color: var(--K); background: var(--O); }
+    .avatar-sm { width: 36px; height: 36px; border: 3px solid var(--K); background: var(--Y); display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 800; box-shadow: 3px 3px 0 var(--K); }
+
+    .danger-card { border-color: var(--R); }
+    .danger-text { font-size: 13px; font-weight: 600; color: #666; margin-bottom: 16px; line-height: 1.5; }
+
+    .mb-24 { margin-bottom: 24px; }
+
+    @media (max-width: 960px) {
+      .content-row { grid-template-columns: 1fr; }
+      .stats-grid { grid-template-columns: 1fr 1fr; }
+      .hero-actions { width: 100%; }
+      h1.main-title { font-size: 56px; }
+    }
+
+    @media (max-width: 900px) {
+      .content-row { grid-template-columns: 1fr; }
+      .stats-grid { grid-template-columns: 1fr 1fr; }
+      .hero-actions { width: 100%; }
+    }
   `]
 })
 export class ProjectDetailComponent implements OnInit, AfterViewInit {
   @ViewChild('hero') heroRef!: ElementRef;
-  @ViewChild('filesSection') filesSectionRef!: ElementRef;
+  @ViewChild('stats') statsRef!: ElementRef;
+  @ViewChild('mainCol') mainColRef!: ElementRef;
+  @ViewChild('sideCol') sideColRef!: ElementRef;
 
   private route = inject(ActivatedRoute);
+  private router = inject(Router);
   private projectSvc = inject(ProjectService);
   private fileSvc = inject(FileService);
+  private authSvc = inject(AuthService);
   private toast = inject(ToastService);
 
   project: Project | null = null;
   files: CodeFile[] = [];
+  currentUser = this.authSvc.getCurrentUser();
 
   ngOnInit(): void {
     const id = Number(this.route.snapshot.paramMap.get('id'));
-    this.projectSvc.getById(id).subscribe(p => { this.project = p; });
-    this.fileSvc.getTree(id).subscribe(f => this.files = f.filter(x => !x.deleted));
+    this.loadProject(id);
+    this.fileSvc.getTree(id).subscribe(f => this.files = f.filter(x => !x.deleted && x.fileType === 'FILE'));
+  }
+
+  loadProject(id: number): void {
+    this.projectSvc.getById(id).subscribe(p => this.project = p);
   }
 
   ngAfterViewInit(): void {
     setTimeout(() => {
       if (this.heroRef) {
         gsap.fromTo(this.heroRef.nativeElement,
-          { opacity: 0, y: 30 }, { opacity: 1, y: 0, duration: 0.5, ease: 'power2.out' });
+          { opacity: 0, y: 40 }, { opacity: 1, y: 0, duration: 0.7, ease: 'power4.out' });
+      }
+      if (this.statsRef) {
+        gsap.fromTo(this.statsRef.nativeElement.querySelectorAll('.stat-card'),
+          { opacity: 0, scale: 0.8 },
+          { opacity: 1, scale: 1, duration: 0.5, stagger: 0.1, ease: 'back.out(1.7)', delay: 0.2 });
+      }
+      if (this.mainColRef) {
+        gsap.fromTo(this.mainColRef.nativeElement,
+          { opacity: 0, x: -30 }, { opacity: 1, x: 0, duration: 0.6, ease: 'power3.out', delay: 0.4 });
+      }
+      if (this.sideColRef) {
+        gsap.fromTo(this.sideColRef.nativeElement,
+          { opacity: 0, x: 30 }, { opacity: 1, x: 0, duration: 0.6, ease: 'power3.out', delay: 0.4 });
       }
     }, 100);
   }
 
-  star(): void { this.projectSvc.star(this.project!.projectId).subscribe(() => this.toast.success('Starred!')); }
-  fork(): void { this.projectSvc.fork(this.project!.projectId).subscribe(() => this.toast.success('Forked!')); }
+  get isStarred(): boolean {
+    return !!(this.project?.starredBy && this.currentUser && this.project.starredBy.includes(this.currentUser.userId));
+  }
+
+  get isForked(): boolean {
+    return !!(this.project?.forkedBy && this.currentUser && this.project.forkedBy.includes(this.currentUser.userId));
+  }
+
+  star(): void {
+    if (!this.project) return;
+    const wasStarred = this.isStarred;
+    this.projectSvc.star(this.project.projectId).subscribe(() => {
+      this.toast.success(wasStarred ? 'Removed from Stars!' : 'Project Starred!');
+      this.loadProject(this.project!.projectId);
+    });
+  }
+
+  fork(): void {
+    if (!this.project) return;
+    const wasForked = this.isForked;
+    this.projectSvc.fork(this.project.projectId).subscribe({
+      next: (res) => {
+        this.toast.success(wasForked ? 'Fork Deleted!' : 'Project Forked Successfully!');
+        this.loadProject(this.project!.projectId);
+      },
+      error: () => this.toast.error('Operation failed')
+    });
+  }
+
+  deleteProject(): void {
+    if (!this.project) return;
+    if (confirm(`ARE YOU SURE? This will permanently delete "${this.project.name}". This action cannot be undone.`)) {
+      this.projectSvc.delete(this.project.projectId).subscribe({
+        next: () => {
+          this.toast.success('Project deleted successfully');
+          this.router.navigate(['/projects']);
+        },
+        error: () => this.toast.error('Failed to delete project')
+      });
+    }
+  }
+
   getIcon(lang: string): string {
-    const m: Record<string, string> = { java: '☕', python: '🐍', javascript: '🟨', typescript: '🔷' };
+    const m: Record<string, string> = {
+      java: '☕', python: '🐍', javascript: '🟨', typescript: '🔷',
+      go: '🐹', rust: '🦀', html: '🌐', css: '🎨', ruby: '💎', php: '🐘'
+    };
     return m[lang?.toLowerCase()] || '📄';
+  }
+
+  getLangColor(lang: string): string {
+    const m: Record<string, string> = {
+      java: '#FFD600', python: '#00C853', javascript: '#FFD600',
+      typescript: '#1A6FFF', cpp: '#FF2D2D', go: '#00C853', rust: '#FB8C00'
+    };
+    return m[lang?.toLowerCase()] || '#AAA';
   }
 }

@@ -79,7 +79,8 @@ describe('Model type shapes', () => {
     const p: Project = {
       projectId: 1, name: 'proj', description: '', language: 'Java',
       visibility: 'PUBLIC', ownerId: 1, memberIds: [],
-      starCount: 0, forkCount: 0, archived: false, createdAt: '', updatedAt: ''
+      starCount: 0, forkCount: 0, archived: false, createdAt: '', updatedAt: '',
+      starredBy: [], forkedBy: []
     };
     expect(['PUBLIC', 'PRIVATE']).toContain(p.visibility);
   });
