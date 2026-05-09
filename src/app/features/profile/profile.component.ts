@@ -77,7 +77,7 @@ import { User } from '../../core/models';
                 <div class="nb-field">
                   <label>USERNAME *</label>
                   <div class="input-wrap">
-                    <span class="input-pfx">@</span>
+                    <span class="input-pfx">&#64;</span>
                     <input formControlName="username" placeholder="your_username" />
                   </div>
                   <div class="form-err" *ngIf="profileForm.get('username')?.invalid && profileForm.get('username')?.touched">Required</div>
@@ -336,10 +336,10 @@ export class ProfileComponent implements OnInit, AfterViewInit {
   }
   get strengthColor(): string {
     const s = this.passwordStrength;
-    if (s <= 25) return '#E53935';
+    if (s <= 25) return 'var(--R)';
     if (s <= 50) return '#FB8C00';
-    if (s <= 75) return '#FDD835';
-    return '#43A047';
+    if (s <= 75) return 'var(--Y)';
+    return 'var(--G)';
   }
   get strengthLabel(): string {
     const s = this.passwordStrength;
