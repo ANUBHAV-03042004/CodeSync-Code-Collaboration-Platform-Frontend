@@ -27,8 +27,7 @@ const LANG_COLORS: Record<string,string> = {
           <div class="date-pill">📅 {{ today | date:'EEEE, MMMM d, yyyy' }}</div>
         </div>
         <div class="hdr-actions">
-          <button class="btn btn-outline" routerLink="/profile">👤 Profile</button>
-          <button class="btn btn-B" routerLink="/projects/new">+ New Project</button>
+          <!-- Removed duplicate buttons: Quick Actions below are preferred -->
         </div>
       </header>
 
