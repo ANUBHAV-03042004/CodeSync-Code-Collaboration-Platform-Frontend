@@ -299,7 +299,7 @@ describe('DashboardComponent', () => {
   it('should call projectSvc.fork when fork is triggered', () => {
     const event = new Event('click');
     event.stopPropagation = jest.fn();
-    component.fork(1, event);
+    component.fork(mockProject as any, event);
     expect(projectSvc.fork).toHaveBeenCalledWith(1);
   });
 });
@@ -364,7 +364,7 @@ describe('ProjectListComponent', () => {
   it('should call star service on star click', () => {
     const e = new Event('click');
     e.stopPropagation = jest.fn();
-    component.star(1, e);
+    component.star(mockProject, e);
     expect(projectSvc.star).toHaveBeenCalledWith(1);
   });
 });

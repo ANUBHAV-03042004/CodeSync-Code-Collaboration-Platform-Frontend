@@ -17,6 +17,8 @@ import { ToastService } from '../../shared/components/toast/toast.service';
   imports: [CommonModule, FormsModule],
   template: `
     <div class="editor-shell" #shell>
+      <!-- High-Visibility Marker -->
+      <div class="nb-editor-marker">NEO-BRUTALIST EDITOR ACTIVE</div>
       <!-- Sidebar: File Tree -->
       <aside class="nb-sidebar" #sidebar>
         <div class="brand-box">
@@ -164,7 +166,8 @@ import { ToastService } from '../../shared/components/toast/toast.service';
     </div>
   `,
   styles: [`
-    .editor-shell { display: flex; height: 100vh; background: var(--W); color: var(--K); overflow: hidden; font-family: 'Space Grotesk', sans-serif; }
+    .nb-editor-marker { position: absolute; top: 10px; right: 80px; z-index: 1000; background: var(--Y); border: 3px solid var(--K); padding: 4px 12px; font-weight: 900; font-size: 11px; box-shadow: 4px 4px 0 var(--K); pointer-events: none; }
+    .editor-shell { display: flex; height: 100vh; background: var(--W); color: var(--K); overflow: hidden; font-family: 'Space Grotesk', sans-serif; position: relative; }
 
     /* ── Sidebar ── */
     .nb-sidebar { width: 280px; border-right: 4px solid var(--K); background: var(--O); display: flex; flex-direction: column; flex-shrink: 0; }
@@ -294,7 +297,7 @@ export class EditorComponent implements OnInit, OnDestroy, AfterViewInit {
 
   private subs: Subscription[] = [];
   private changeTimer: any;
-  private sessionId: string | null = null;
+  public sessionId: string | null = null;
 
   ngOnInit(): void {
     this.projectId = Number(this.route.snapshot.paramMap.get('projectId'));
