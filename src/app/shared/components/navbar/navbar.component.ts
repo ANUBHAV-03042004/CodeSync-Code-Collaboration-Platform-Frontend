@@ -14,7 +14,7 @@ import { User } from '../../../core/models';
   template: `
     <div class="nb-wrapper" #navbar>
       <nav class="navbar">
-        <a class="nb-brand" [routerLink]="user ? '/dashboard' : '/'">
+        <a class="nb-brand" routerLink="/">
           <div class="nb-bolt">⚡</div>
           <span class="nb-name">YOURS<span class="nb-name-accent">CODE</span></span>
         </a>
