@@ -37,7 +37,9 @@ export interface Project {
   ownerId: number;
   memberIds: number[];
   starCount: number;
+  starredBy: number[];
   forkCount: number;
+  forkedBy: number[];
   archived: boolean;
   createdAt: string;
   updatedAt: string;

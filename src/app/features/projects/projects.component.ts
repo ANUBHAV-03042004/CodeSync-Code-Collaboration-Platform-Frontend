@@ -303,84 +303,205 @@ export class ProjectCreateComponent implements AfterViewInit {
   imports: [CommonModule, RouterLink],
   template: `
     <div class="page" *ngIf="project">
-      <div class="project-hero" #hero>
-        <div class="hero-left">
+      <!-- Top Banner / Hero -->
+      <div class="nb-hero" #hero>
+        <div class="hero-content">
           <div class="breadcrumbs">
-            <a routerLink="/projects">Projects</a> / {{ project.name }}
+            <a routerLink="/projects">PROJECTS</a> / <span class="active">{{ project.name }}</span>
           </div>
-          <h1>{{ project.name }}</h1>
-          <p class="description">{{ project.description || 'No description provided.' }}</p>
+          <h1 class="bb">{{ project.name }}</h1>
+          <p class="desc">{{ project.description || 'No description provided for this project.' }}</p>
+
           <div class="badges">
-            <span class="lang-badge">{{ project.language }}</span>
-            <span class="vis-badge" [class.public]="project.visibility === 'PUBLIC'">{{ project.visibility }}</span>
-            <span class="archived-badge" *ngIf="project.archived">Archived</span>
-          </div>
-          <div class="meta">
-            <span>⭐ {{ project.starCount }} stars</span>
-            <span>🍴 {{ project.forkCount }} forks</span>
-            <span>👥 {{ (project.memberIds || []).length }} members</span>
+            <span class="nb-badge" [style.background]="getLangColor(project.language)">{{ project.language }}</span>
+            <span class="nb-badge" [class.blue]="project.visibility === 'PRIVATE'" [class.green]="project.visibility === 'PUBLIC'">
+              {{ project.visibility }}
+            </span>
+            <span class="nb-badge red" *ngIf="project.archived">ARCHIVED</span>
           </div>
         </div>
+
         <div class="hero-actions">
-          <button class="btn-primary" [routerLink]="['/editor', project.projectId]">Open Editor</button>
-          <button class="btn-outline" (click)="star()">⭐ Star</button>
-          <button class="btn-outline" (click)="fork()">🍴 Fork</button>
+          <button class="nb-btn btn-blue main-cta" [routerLink]="['/editor', project.projectId]">
+            OPEN EDITOR <span class="arr">↗</span>
+          </button>
+          <div class="social-row">
+            <button class="nb-btn btn-yellow flex-1" (click)="star()" [class.active]="isStarred">
+              {{ isStarred ? '★ UNSTAR' : '☆ STAR' }}
+            </button>
+            <button class="nb-btn btn-white flex-1" (click)="fork()" [class.active]="isForked">
+              {{ isForked ? '🍴 UNFORK' : '🍴 FORK' }}
+            </button>
+          </div>
         </div>
       </div>
 
-      <!-- Files -->
-      <div class="section" #filesSection>
-        <h2>Files</h2>
-        <div class="file-list">
-          <div class="file-row" *ngFor="let f of files">
-            <span class="file-icon">{{ getIcon(f.language) }}</span>
-            <span class="file-name">{{ f.name }}</span>
-            <span class="file-path">{{ f.path }}</span>
-            <span class="file-lang">{{ f.language }}</span>
+      <!-- Stats Grid -->
+      <div class="stats-grid">
+        <div class="stat-card">
+          <div class="val">{{ project.starCount }}</div>
+          <div class="lbl">STARS</div>
+        </div>
+        <div class="stat-card">
+          <div class="val">{{ project.forkCount }}</div>
+          <div class="lbl">FORKS</div>
+        </div>
+        <div class="stat-card">
+          <div class="val">{{ (project.memberIds || []).length }}</div>
+          <div class="lbl">MEMBERS</div>
+        </div>
+        <div class="stat-card">
+          <div class="val">{{ files.length }}</div>
+          <div class="lbl">FILES</div>
+        </div>
+      </div>
+
+      <!-- Files Section -->
+      <div class="content-row">
+        <div class="main-col">
+          <div class="nb-card" #filesSection>
+            <div class="nb-card-hdr yellow-hdr">
+              <span class="card-label">PROJECT FILES</span>
+              <div class="hdr-accent"></div>
+            </div>
+            <div class="file-list">
+              <div class="file-row" *ngFor="let f of files">
+                <span class="f-icon">{{ getIcon(f.language) }}</span>
+                <div class="f-info">
+                  <span class="f-name">{{ f.name }}</span>
+                  <span class="f-path">{{ f.path }}</span>
+                </div>
+                <span class="f-lang">{{ f.language }}</span>
+              </div>
+              <div class="empty-files" *ngIf="!files.length">
+                <div class="empty-icon">📭</div>
+                <p>No files found. Launch the editor to start coding!</p>
+              </div>
+            </div>
           </div>
-          <div class="empty-files" *ngIf="!files.length">No files yet. Open the editor to create files.</div>
+        </div>
+
+        <!-- Sidebar / Info -->
+        <div class="side-col">
+          <div class="nb-card">
+            <div class="nb-card-hdr blue-hdr">
+              <span class="card-label">ABOUT</span>
+            </div>
+            <div class="card-body">
+              <div class="info-item">
+                <label>OWNER ID</label>
+                <div>#{{ project.ownerId }}</div>
+              </div>
+              <div class="info-item">
+                <label>CREATED</label>
+                <div>{{ project.createdAt | date:'MMM d, y' }}</div>
+              </div>
+              <div class="info-item">
+                <label>LAST UPDATE</label>
+                <div>{{ project.updatedAt | date:'short' }}</div>
+              </div>
+            </div>
+          </div>
+
+          <div class="nb-card mt-24">
+            <div class="nb-card-hdr green-hdr">
+              <span class="card-label">COLLABORATORS</span>
+            </div>
+            <div class="collab-list">
+              <div class="collab-item" *ngFor="let mid of project.memberIds">
+                <div class="avatar-sm">U{{ mid }}</div>
+                <span>User #{{ mid }}</span>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
     </div>
-    <div class="loading" *ngIf="!project">Loading…</div>
+
+    <div class="loading-wrap" *ngIf="!project">
+      <div class="nb-loader"></div>
+      <p>FETCHING PROJECT DATA...</p>
+    </div>
   `,
   styles: [`
-    .page { padding: 32px; max-width: 1100px; margin: 0 auto; }
-    .loading { color: rgba(255,255,255,0.5); text-align: center; padding: 60px; }
-    .project-hero { display: flex; align-items: flex-start; justify-content: space-between;
-      gap: 24px; margin-bottom: 40px; padding-bottom: 32px;
-      border-bottom: 1px solid rgba(255,255,255,0.08); }
-    .breadcrumbs { color: rgba(255,255,255,0.4); font-size: 13px; margin-bottom: 12px; }
-    .breadcrumbs a { color: #818cf8; text-decoration: none; }
-    h1 { color: #fff; font-size: 28px; margin: 0 0 8px; }
-    .description { color: rgba(255,255,255,0.6); font-size: 15px; margin: 0 0 16px; }
-    .badges { display: flex; gap: 8px; margin-bottom: 16px; flex-wrap: wrap; }
-    .lang-badge { background: rgba(99,102,241,0.2); color: #818cf8; border-radius: 6px; padding: 3px 10px; font-size: 13px; }
-    .vis-badge { border-radius: 6px; padding: 3px 10px; font-size: 13px; background: rgba(255,255,255,0.08); color: rgba(255,255,255,0.5); }
-    .vis-badge.public { background: rgba(34,197,94,0.15); color: #4ade80; }
-    .archived-badge { background: rgba(245,158,11,0.15); color: #fbbf24; border-radius: 6px; padding: 3px 10px; font-size: 12px; }
-    .meta { display: flex; gap: 24px; color: rgba(255,255,255,0.5); font-size: 13px; }
-    .hero-actions { display: flex; flex-direction: column; gap: 10px; min-width: 160px; }
-    .btn-primary { background: linear-gradient(135deg,#6366f1,#8b5cf6); border: none;
-      border-radius: 10px; padding: 12px 20px; color: #fff; font-size: 14px; font-weight: 600;
-      cursor: pointer; text-align: center; text-decoration: none; }
-    .btn-outline { background: none; border: 1px solid rgba(255,255,255,0.15); border-radius: 10px;
-      padding: 10px 20px; color: rgba(255,255,255,0.7); font-size: 14px; cursor: pointer;
-      transition: border-color 0.2s; }
-    .btn-outline:hover { border-color: #6366f1; }
-    .section h2 { color: #fff; font-size: 20px; margin: 0 0 16px; }
-    .file-list { background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08);
-      border-radius: 12px; overflow: hidden; }
-    .file-row { display: flex; align-items: center; gap: 12px; padding: 12px 16px; font-size: 13px;
-      border-bottom: 1px solid rgba(255,255,255,0.05); transition: background 0.15s; }
+    .page { padding: 40px 24px; max-width: 1200px; margin: 0 auto; min-height: 100vh; }
+
+    /* ── Hero ── */
+    .nb-hero { display: flex; justify-content: space-between; gap: 40px; margin-bottom: 32px; flex-wrap: wrap; }
+    .hero-content { flex: 1; min-width: 300px; }
+    .breadcrumbs { font-size: 11px; font-weight: 800; color: #666; margin-bottom: 8px; letter-spacing: 1px; }
+    .breadcrumbs a { color: var(--B); text-decoration: none; }
+    .breadcrumbs .active { color: var(--K); }
+    h1.bb { font-size: 48px; margin: 0 0 12px; line-height: 1; letter-spacing: -1px; text-transform: uppercase; }
+    .desc { font-size: 18px; color: #444; font-weight: 500; margin-bottom: 20px; max-width: 600px; }
+
+    .badges { display: flex; gap: 10px; }
+    .nb-badge { padding: 4px 12px; border: 2px solid var(--K); font-size: 11px; font-weight: 800; text-transform: uppercase; border-radius: 4px; background: var(--W); box-shadow: 2px 2px 0 var(--K); }
+    .nb-badge.blue { background: var(--B); color: #fff; }
+    .nb-badge.green { background: var(--G); color: #fff; }
+    .nb-badge.red { background: var(--R); color: #fff; }
+
+    .hero-actions { display: flex; flex-direction: column; gap: 16px; width: 340px; }
+    .social-row { display: flex; gap: 12px; }
+    .nb-btn { border: 3px solid var(--K); padding: 14px 20px; font-weight: 800; font-family: 'Space Grotesk', sans-serif; cursor: pointer; font-size: 14px; box-shadow: 4px 4px 0 var(--K); transition: all .1s; text-transform: uppercase; text-decoration: none; display: inline-flex; align-items: center; justify-content: center; gap: 8px; }
+    .nb-btn:active { transform: translate(2px, 2px); box-shadow: 2px 2px 0 var(--K); }
+    .nb-btn.active { background: var(--K) !important; color: #fff !important; }
+    .btn-blue { background: var(--B); color: #fff; }
+    .btn-yellow { background: var(--Y); color: var(--K); }
+    .btn-white { background: var(--W); color: var(--K); }
+    .main-cta { font-size: 18px; padding: 20px; }
+    .flex-1 { flex: 1; }
+
+    /* ── Stats ── */
+    .stats-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 20px; margin-bottom: 40px; }
+    .stat-card { border: 3px solid var(--K); background: var(--W); padding: 20px; box-shadow: 6px 6px 0 var(--K); text-align: center; }
+    .stat-card .val { font-size: 32px; font-weight: 800; line-height: 1; margin-bottom: 4px; }
+    .stat-card .lbl { font-size: 10px; font-weight: 800; color: #666; letter-spacing: 1.5px; }
+
+    /* ── Content ── */
+    .content-row { display: grid; grid-template-columns: 1fr 320px; gap: 32px; }
+    .nb-card { border: 3px solid var(--K); background: var(--W); box-shadow: 6px 6px 0 var(--K); overflow: hidden; }
+    .nb-card-hdr { padding: 12px 20px; border-bottom: 3px solid var(--K); display: flex; align-items: center; gap: 12px; }
+    .yellow-hdr { background: var(--Y); }
+    .blue-hdr { background: var(--B); color: #fff; }
+    .green-hdr { background: var(--G); color: #fff; }
+    .card-label { font-size: 12px; font-weight: 800; letter-spacing: 1.5px; }
+    .hdr-accent { flex: 1; height: 3px; background: rgba(0,0,0,0.1); }
+
+    .file-list { display: flex; flex-direction: column; }
+    .file-row { display: flex; align-items: center; padding: 16px 20px; border-bottom: 2px solid var(--O); transition: background .15s; }
     .file-row:last-child { border-bottom: none; }
-    .file-row:hover { background: rgba(255,255,255,0.04); }
-    .file-icon { font-size: 16px; }
-    .file-name { color: #e2e8f0; font-weight: 500; }
-    .file-path { color: rgba(255,255,255,0.4); margin-left: 4px; font-family: monospace; }
-    .file-lang { margin-left: auto; background: rgba(99,102,241,0.15); color: #818cf8;
-      border-radius: 4px; padding: 2px 8px; font-size: 11px; }
-    .empty-files { color: rgba(255,255,255,0.4); text-align: center; padding: 32px; }
+    .file-row:hover { background: var(--O); }
+    .f-icon { font-size: 24px; margin-right: 16px; }
+    .f-info { flex: 1; display: flex; flex-direction: column; }
+    .f-name { font-weight: 700; font-size: 15px; }
+    .f-path { font-size: 12px; color: #777; font-family: monospace; }
+    .f-lang { font-size: 10px; font-weight: 800; padding: 2px 8px; border: 2px solid var(--K); border-radius: 4px; text-transform: uppercase; background: var(--O); }
+
+    .card-body { padding: 20px; }
+    .info-item { margin-bottom: 16px; }
+    .info-item:last-child { margin-bottom: 0; }
+    .info-item label { display: block; font-size: 9px; font-weight: 800; color: #888; letter-spacing: 1px; margin-bottom: 4px; }
+    .info-item div { font-weight: 700; font-size: 14px; }
+
+    .collab-list { padding: 12px; }
+    .collab-item { display: flex; align-items: center; gap: 12px; padding: 8px; }
+    .avatar-sm { width: 32px; height: 32px; border: 2px solid var(--K); background: var(--O); display: flex; align-items: center; justify-content: center; font-size: 10px; font-weight: 800; border-radius: 4px; }
+
+    .empty-files { padding: 60px 20px; text-align: center; color: #888; }
+    .empty-icon { font-size: 48px; margin-bottom: 12px; opacity: .5; }
+
+    .loading-wrap { display: flex; flex-direction: column; align-items: center; justify-content: center; height: 60vh; gap: 16px; }
+    .nb-loader { width: 40px; height: 40px; border: 6px solid var(--O); border-top-color: var(--B); border-radius: 50%; animation: spin 1s linear infinite; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    .mt-24 { margin-top: 24px; }
+
+    @media (max-width: 900px) {
+      .content-row { grid-template-columns: 1fr; }
+      .stats-grid { grid-template-columns: 1fr 1fr; }
+      .hero-actions { width: 100%; }
+    }
   `]
 })
 export class ProjectDetailComponent implements OnInit, AfterViewInit {
@@ -390,30 +511,72 @@ export class ProjectDetailComponent implements OnInit, AfterViewInit {
   private route = inject(ActivatedRoute);
   private projectSvc = inject(ProjectService);
   private fileSvc = inject(FileService);
+  private authSvc = inject(AuthService);
   private toast = inject(ToastService);
 
   project: Project | null = null;
   files: CodeFile[] = [];
+  currentUser = this.authSvc.getCurrentUser();
 
   ngOnInit(): void {
     const id = Number(this.route.snapshot.paramMap.get('id'));
-    this.projectSvc.getById(id).subscribe(p => { this.project = p; });
-    this.fileSvc.getTree(id).subscribe(f => this.files = f.filter(x => !x.deleted));
+    this.loadProject(id);
+    this.fileSvc.getTree(id).subscribe(f => this.files = f.filter(x => !x.deleted && x.fileType === 'FILE'));
+  }
+
+  loadProject(id: number): void {
+    this.projectSvc.getById(id).subscribe(p => this.project = p);
   }
 
   ngAfterViewInit(): void {
     setTimeout(() => {
       if (this.heroRef) {
         gsap.fromTo(this.heroRef.nativeElement,
-          { opacity: 0, y: 30 }, { opacity: 1, y: 0, duration: 0.5, ease: 'power2.out' });
+          { opacity: 0, y: 30 }, { opacity: 1, y: 0, duration: 0.6, ease: 'power3.out' });
       }
     }, 100);
   }
 
-  star(): void { this.projectSvc.star(this.project!.projectId).subscribe(() => this.toast.success('Starred!')); }
-  fork(): void { this.projectSvc.fork(this.project!.projectId).subscribe(() => this.toast.success('Forked!')); }
+  get isStarred(): boolean {
+    return !!(this.project?.starredBy && this.currentUser && this.project.starredBy.includes(this.currentUser.userId));
+  }
+
+  get isForked(): boolean {
+    return !!(this.project?.forkedBy && this.currentUser && this.project.forkedBy.includes(this.currentUser.userId));
+  }
+
+  star(): void {
+    if (!this.project) return;
+    this.projectSvc.star(this.project.projectId).subscribe(() => {
+      this.toast.success(this.isStarred ? 'Unstarred!' : 'Starred!');
+      this.loadProject(this.project!.projectId);
+    });
+  }
+
+  fork(): void {
+    if (!this.project) return;
+    this.projectSvc.fork(this.project.projectId).subscribe({
+      next: (res) => {
+        this.toast.success(this.isForked ? 'Fork deleted!' : 'Fork created!');
+        this.loadProject(this.project!.projectId);
+      },
+      error: () => this.toast.error('Action failed')
+    });
+  }
+
   getIcon(lang: string): string {
-    const m: Record<string, string> = { java: '☕', python: '🐍', javascript: '🟨', typescript: '🔷' };
+    const m: Record<string, string> = {
+      java: '☕', python: '🐍', javascript: '🟨', typescript: '🔷',
+      go: '🐹', rust: '🦀', html: '🌐', css: '🎨'
+    };
     return m[lang?.toLowerCase()] || '📄';
+  }
+
+  getLangColor(lang: string): string {
+    const m: Record<string, string> = {
+      java: '#FFD600', python: '#1A6FFF', javascript: '#FFD600',
+      typescript: '#1A6FFF', cpp: '#FF2D2D', go: '#00C853'
+    };
+    return m[lang?.toLowerCase()] || '#DDD';
   }
 }
