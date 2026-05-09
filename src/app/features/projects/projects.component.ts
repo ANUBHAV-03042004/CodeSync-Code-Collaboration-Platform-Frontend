@@ -309,15 +309,15 @@ export class ProjectCreateComponent implements AfterViewInit {
           <div class="breadcrumbs">
             <a routerLink="/projects">PROJECTS</a> / <span class="active">{{ project.name }}</span>
           </div>
-          <h1 class="bb">{{ project.name }}</h1>
+          <h1 class="bb main-title">{{ project.name }}</h1>
           <p class="desc">{{ project.description || 'No description provided for this project.' }}</p>
 
           <div class="badges">
-            <span class="nb-badge" [style.background]="getLangColor(project.language)">{{ project.language }}</span>
-            <span class="nb-badge" [class.blue]="project.visibility === 'PRIVATE'" [class.green]="project.visibility === 'PUBLIC'">
+            <span class="nb-badge lang-badge" [style.background]="getLangColor(project.language)">{{ project.language }}</span>
+            <span class="nb-badge vis-badge" [class.blue]="project.visibility === 'PRIVATE'" [class.green]="project.visibility === 'PUBLIC'">
               {{ project.visibility }}
             </span>
-            <span class="nb-badge red" *ngIf="project.archived">ARCHIVED</span>
+            <span class="nb-badge red-badge" *ngIf="project.archived">ARCHIVED</span>
           </div>
         </div>
 
@@ -337,7 +337,7 @@ export class ProjectCreateComponent implements AfterViewInit {
       </div>
 
       <!-- Stats Grid -->
-      <div class="stats-grid">
+      <div class="stats-grid" #stats>
         <div class="stat-card">
           <div class="val">{{ project.starCount }}</div>
           <div class="lbl">STARS</div>
@@ -356,10 +356,10 @@ export class ProjectCreateComponent implements AfterViewInit {
         </div>
       </div>
 
-      <!-- Files Section -->
+      <!-- Content Row -->
       <div class="content-row">
-        <div class="main-col">
-          <div class="nb-card" #filesSection>
+        <div class="main-col" #mainCol>
+          <div class="nb-card">
             <div class="nb-card-hdr yellow-hdr">
               <span class="card-label">PROJECT FILES</span>
               <div class="hdr-accent"></div>
@@ -382,28 +382,28 @@ export class ProjectCreateComponent implements AfterViewInit {
         </div>
 
         <!-- Sidebar / Info -->
-        <div class="side-col">
-          <div class="nb-card">
+        <div class="side-col" #sideCol>
+          <div class="nb-card mb-24">
             <div class="nb-card-hdr blue-hdr">
               <span class="card-label">ABOUT</span>
             </div>
             <div class="card-body">
               <div class="info-item">
-                <label>OWNER ID</label>
-                <div>#{{ project.ownerId }}</div>
+                <label>OWNER</label>
+                <div class="owner-tag">USER #{{ project.ownerId }}</div>
               </div>
               <div class="info-item">
                 <label>CREATED</label>
-                <div>{{ project.createdAt | date:'MMM d, y' }}</div>
+                <div>{{ project.createdAt | date:'MMMM d, y' }}</div>
               </div>
               <div class="info-item">
-                <label>LAST UPDATE</label>
-                <div>{{ project.updatedAt | date:'short' }}</div>
+                <label>LATEST UPDATE</label>
+                <div>{{ project.updatedAt | date:'medium' }}</div>
               </div>
             </div>
           </div>
 
-          <div class="nb-card mt-24">
+          <div class="nb-card mb-24">
             <div class="nb-card-hdr green-hdr">
               <span class="card-label">COLLABORATORS</span>
             </div>
@@ -412,6 +412,19 @@ export class ProjectCreateComponent implements AfterViewInit {
                 <div class="avatar-sm">U{{ mid }}</div>
                 <span>User #{{ mid }}</span>
               </div>
+            </div>
+          </div>
+
+          <!-- Danger Zone -->
+          <div class="nb-card danger-card" *ngIf="currentUser?.userId === project.ownerId">
+            <div class="nb-card-hdr red-hdr">
+              <span class="card-label">DANGER ZONE</span>
+            </div>
+            <div class="card-body">
+              <p class="danger-text">Permanently delete this project and all its files.</p>
+              <button class="nb-btn btn-red w-full" (click)="deleteProject()">
+                DELETE PROJECT
+              </button>
             </div>
           </div>
         </div>
@@ -424,78 +437,90 @@ export class ProjectCreateComponent implements AfterViewInit {
     </div>
   `,
   styles: [`
-    .page { padding: 40px 24px; max-width: 1200px; margin: 0 auto; min-height: 100vh; }
+    .page { padding: 48px 24px; max-width: 1200px; margin: 0 auto; min-height: 100vh; }
 
     /* ── Hero ── */
-    .nb-hero { display: flex; justify-content: space-between; gap: 40px; margin-bottom: 32px; flex-wrap: wrap; }
-    .hero-content { flex: 1; min-width: 300px; }
-    .breadcrumbs { font-size: 11px; font-weight: 800; color: #666; margin-bottom: 8px; letter-spacing: 1px; }
-    .breadcrumbs a { color: var(--B); text-decoration: none; }
+    .nb-hero { display: flex; justify-content: space-between; gap: 48px; margin-bottom: 48px; flex-wrap: wrap; align-items: flex-start; }
+    .hero-content { flex: 1; min-width: 320px; }
+    .breadcrumbs { font-size: 11px; font-weight: 800; color: #888; margin-bottom: 12px; letter-spacing: 2px; }
+    .breadcrumbs a { color: var(--B); text-decoration: none; border-bottom: 2px solid transparent; }
+    .breadcrumbs a:hover { border-bottom-color: var(--B); }
     .breadcrumbs .active { color: var(--K); }
-    h1.bb { font-size: 48px; margin: 0 0 12px; line-height: 1; letter-spacing: -1px; text-transform: uppercase; }
-    .desc { font-size: 18px; color: #444; font-weight: 500; margin-bottom: 20px; max-width: 600px; }
 
-    .badges { display: flex; gap: 10px; }
-    .nb-badge { padding: 4px 12px; border: 2px solid var(--K); font-size: 11px; font-weight: 800; text-transform: uppercase; border-radius: 4px; background: var(--W); box-shadow: 2px 2px 0 var(--K); }
+    h1.main-title { font-family: 'Bebas Neue', sans-serif; font-size: 72px; margin: 0 0 16px; line-height: 0.9; letter-spacing: 1px; color: var(--K); text-transform: uppercase; }
+    .desc { font-size: 20px; color: #333; font-weight: 500; margin-bottom: 28px; max-width: 650px; line-height: 1.4; }
+
+    .badges { display: flex; gap: 12px; }
+    .nb-badge { padding: 6px 14px; border: 3px solid var(--K); font-size: 11px; font-weight: 800; text-transform: uppercase; background: var(--W); box-shadow: 4px 4px 0 var(--K); letter-spacing: 1px; }
     .nb-badge.blue { background: var(--B); color: #fff; }
     .nb-badge.green { background: var(--G); color: #fff; }
-    .nb-badge.red { background: var(--R); color: #fff; }
+    .nb-badge.red-badge { background: var(--R); color: #fff; }
 
-    .hero-actions { display: flex; flex-direction: column; gap: 16px; width: 340px; }
-    .social-row { display: flex; gap: 12px; }
-    .nb-btn { border: 3px solid var(--K); padding: 14px 20px; font-weight: 800; font-family: 'Space Grotesk', sans-serif; cursor: pointer; font-size: 14px; box-shadow: 4px 4px 0 var(--K); transition: all .1s; text-transform: uppercase; text-decoration: none; display: inline-flex; align-items: center; justify-content: center; gap: 8px; }
-    .nb-btn:active { transform: translate(2px, 2px); box-shadow: 2px 2px 0 var(--K); }
+    .hero-actions { display: flex; flex-direction: column; gap: 20px; width: 360px; }
+    .social-row { display: flex; gap: 16px; }
+    .nb-btn { border: 4px solid var(--K); padding: 16px 24px; font-weight: 800; font-family: 'Space Grotesk', sans-serif; cursor: pointer; font-size: 14px; box-shadow: 6px 6px 0 var(--K); transition: all .1s; text-transform: uppercase; text-decoration: none; display: inline-flex; align-items: center; justify-content: center; gap: 10px; }
+    .nb-btn:hover { transform: translate(-2px, -2px); box-shadow: 8px 8px 0 var(--K); }
+    .nb-btn:active { transform: translate(2px, 2px); box-shadow: 4px 4px 0 var(--K); }
     .nb-btn.active { background: var(--K) !important; color: #fff !important; }
+
     .btn-blue { background: var(--B); color: #fff; }
     .btn-yellow { background: var(--Y); color: var(--K); }
     .btn-white { background: var(--W); color: var(--K); }
-    .main-cta { font-size: 18px; padding: 20px; }
+    .btn-red { background: var(--R); color: #fff; }
+    .main-cta { font-size: 20px; padding: 22px; }
     .flex-1 { flex: 1; }
+    .w-full { width: 100%; }
 
     /* ── Stats ── */
-    .stats-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 20px; margin-bottom: 40px; }
-    .stat-card { border: 3px solid var(--K); background: var(--W); padding: 20px; box-shadow: 6px 6px 0 var(--K); text-align: center; }
-    .stat-card .val { font-size: 32px; font-weight: 800; line-height: 1; margin-bottom: 4px; }
-    .stat-card .lbl { font-size: 10px; font-weight: 800; color: #666; letter-spacing: 1.5px; }
+    .stats-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 24px; margin-bottom: 48px; }
+    .stat-card { border: 4px solid var(--K); background: var(--W); padding: 24px; box-shadow: 8px 8px 0 var(--K); text-align: center; }
+    .stat-card .val { font-size: 40px; font-weight: 800; line-height: 1; margin-bottom: 6px; font-family: 'Bebas Neue', sans-serif; }
+    .stat-card .lbl { font-size: 11px; font-weight: 800; color: #666; letter-spacing: 2px; }
 
     /* ── Content ── */
-    .content-row { display: grid; grid-template-columns: 1fr 320px; gap: 32px; }
-    .nb-card { border: 3px solid var(--K); background: var(--W); box-shadow: 6px 6px 0 var(--K); overflow: hidden; }
-    .nb-card-hdr { padding: 12px 20px; border-bottom: 3px solid var(--K); display: flex; align-items: center; gap: 12px; }
+    .content-row { display: grid; grid-template-columns: 1fr 340px; gap: 40px; }
+    .nb-card { border: 4px solid var(--K); background: var(--W); box-shadow: 8px 8px 0 var(--K); overflow: hidden; }
+    .nb-card-hdr { padding: 14px 24px; border-bottom: 4px solid var(--K); display: flex; align-items: center; gap: 14px; }
     .yellow-hdr { background: var(--Y); }
     .blue-hdr { background: var(--B); color: #fff; }
     .green-hdr { background: var(--G); color: #fff; }
-    .card-label { font-size: 12px; font-weight: 800; letter-spacing: 1.5px; }
-    .hdr-accent { flex: 1; height: 3px; background: rgba(0,0,0,0.1); }
+    .red-hdr { background: var(--R); color: #fff; }
+    .card-label { font-size: 13px; font-weight: 800; letter-spacing: 2px; }
+    .hdr-accent { flex: 1; height: 4px; background: rgba(0,0,0,0.1); }
 
     .file-list { display: flex; flex-direction: column; }
-    .file-row { display: flex; align-items: center; padding: 16px 20px; border-bottom: 2px solid var(--O); transition: background .15s; }
+    .file-row { display: flex; align-items: center; padding: 18px 24px; border-bottom: 3px solid var(--O); transition: background .15s; }
     .file-row:last-child { border-bottom: none; }
     .file-row:hover { background: var(--O); }
-    .f-icon { font-size: 24px; margin-right: 16px; }
+    .f-icon { font-size: 28px; margin-right: 20px; }
     .f-info { flex: 1; display: flex; flex-direction: column; }
-    .f-name { font-weight: 700; font-size: 15px; }
-    .f-path { font-size: 12px; color: #777; font-family: monospace; }
-    .f-lang { font-size: 10px; font-weight: 800; padding: 2px 8px; border: 2px solid var(--K); border-radius: 4px; text-transform: uppercase; background: var(--O); }
+    .f-name { font-weight: 800; font-size: 16px; color: var(--K); }
+    .f-path { font-size: 12px; color: #777; font-family: 'JetBrains Mono', monospace; }
+    .f-lang { font-size: 11px; font-weight: 800; padding: 3px 10px; border: 3px solid var(--K); text-transform: uppercase; background: var(--W); box-shadow: 3px 3px 0 var(--K); }
 
-    .card-body { padding: 20px; }
-    .info-item { margin-bottom: 16px; }
+    .card-body { padding: 24px; }
+    .info-item { margin-bottom: 20px; }
     .info-item:last-child { margin-bottom: 0; }
-    .info-item label { display: block; font-size: 9px; font-weight: 800; color: #888; letter-spacing: 1px; margin-bottom: 4px; }
-    .info-item div { font-weight: 700; font-size: 14px; }
+    .info-item label { display: block; font-size: 10px; font-weight: 800; color: #888; letter-spacing: 1.5px; margin-bottom: 6px; text-transform: uppercase; }
+    .info-item div { font-weight: 700; font-size: 15px; }
+    .owner-tag { color: var(--B); font-weight: 800 !important; }
 
-    .collab-list { padding: 12px; }
-    .collab-item { display: flex; align-items: center; gap: 12px; padding: 8px; }
-    .avatar-sm { width: 32px; height: 32px; border: 2px solid var(--K); background: var(--O); display: flex; align-items: center; justify-content: center; font-size: 10px; font-weight: 800; border-radius: 4px; }
+    .collab-list { padding: 16px; display: flex; flex-direction: column; gap: 8px; }
+    .collab-item { display: flex; align-items: center; gap: 14px; padding: 10px; border: 2px solid transparent; transition: all .1s; }
+    .collab-item:hover { border-color: var(--K); background: var(--O); }
+    .avatar-sm { width: 36px; height: 36px; border: 3px solid var(--K); background: var(--Y); display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 800; box-shadow: 3px 3px 0 var(--K); }
 
-    .empty-files { padding: 60px 20px; text-align: center; color: #888; }
-    .empty-icon { font-size: 48px; margin-bottom: 12px; opacity: .5; }
+    .danger-card { border-color: var(--R); }
+    .danger-text { font-size: 13px; font-weight: 600; color: #666; margin-bottom: 16px; line-height: 1.5; }
 
-    .loading-wrap { display: flex; flex-direction: column; align-items: center; justify-content: center; height: 60vh; gap: 16px; }
-    .nb-loader { width: 40px; height: 40px; border: 6px solid var(--O); border-top-color: var(--B); border-radius: 50%; animation: spin 1s linear infinite; }
-    @keyframes spin { to { transform: rotate(360deg); } }
+    .mb-24 { margin-bottom: 24px; }
 
-    .mt-24 { margin-top: 24px; }
+    @media (max-width: 960px) {
+      .content-row { grid-template-columns: 1fr; }
+      .stats-grid { grid-template-columns: 1fr 1fr; }
+      .hero-actions { width: 100%; }
+      h1.main-title { font-size: 56px; }
+    }
 
     @media (max-width: 900px) {
       .content-row { grid-template-columns: 1fr; }
@@ -506,9 +531,12 @@ export class ProjectCreateComponent implements AfterViewInit {
 })
 export class ProjectDetailComponent implements OnInit, AfterViewInit {
   @ViewChild('hero') heroRef!: ElementRef;
-  @ViewChild('filesSection') filesSectionRef!: ElementRef;
+  @ViewChild('stats') statsRef!: ElementRef;
+  @ViewChild('mainCol') mainColRef!: ElementRef;
+  @ViewChild('sideCol') sideColRef!: ElementRef;
 
   private route = inject(ActivatedRoute);
+  private router = inject(Router);
   private projectSvc = inject(ProjectService);
   private fileSvc = inject(FileService);
   private authSvc = inject(AuthService);
@@ -532,7 +560,20 @@ export class ProjectDetailComponent implements OnInit, AfterViewInit {
     setTimeout(() => {
       if (this.heroRef) {
         gsap.fromTo(this.heroRef.nativeElement,
-          { opacity: 0, y: 30 }, { opacity: 1, y: 0, duration: 0.6, ease: 'power3.out' });
+          { opacity: 0, y: 40 }, { opacity: 1, y: 0, duration: 0.7, ease: 'power4.out' });
+      }
+      if (this.statsRef) {
+        gsap.fromTo(this.statsRef.nativeElement.querySelectorAll('.stat-card'),
+          { opacity: 0, scale: 0.8 },
+          { opacity: 1, scale: 1, duration: 0.5, stagger: 0.1, ease: 'back.out(1.7)', delay: 0.2 });
+      }
+      if (this.mainColRef) {
+        gsap.fromTo(this.mainColRef.nativeElement,
+          { opacity: 0, x: -30 }, { opacity: 1, x: 0, duration: 0.6, ease: 'power3.out', delay: 0.4 });
+      }
+      if (this.sideColRef) {
+        gsap.fromTo(this.sideColRef.nativeElement,
+          { opacity: 0, x: 30 }, { opacity: 1, x: 0, duration: 0.6, ease: 'power3.out', delay: 0.4 });
       }
     }, 100);
   }
@@ -547,36 +588,51 @@ export class ProjectDetailComponent implements OnInit, AfterViewInit {
 
   star(): void {
     if (!this.project) return;
+    const wasStarred = this.isStarred;
     this.projectSvc.star(this.project.projectId).subscribe(() => {
-      this.toast.success(this.isStarred ? 'Unstarred!' : 'Starred!');
+      this.toast.success(wasStarred ? 'Removed from Stars!' : 'Project Starred!');
       this.loadProject(this.project!.projectId);
     });
   }
 
   fork(): void {
     if (!this.project) return;
+    const wasForked = this.isForked;
     this.projectSvc.fork(this.project.projectId).subscribe({
       next: (res) => {
-        this.toast.success(this.isForked ? 'Fork deleted!' : 'Fork created!');
+        this.toast.success(wasForked ? 'Fork Deleted!' : 'Project Forked Successfully!');
         this.loadProject(this.project!.projectId);
       },
-      error: () => this.toast.error('Action failed')
+      error: () => this.toast.error('Operation failed')
     });
+  }
+
+  deleteProject(): void {
+    if (!this.project) return;
+    if (confirm(`ARE YOU SURE? This will permanently delete "${this.project.name}". This action cannot be undone.`)) {
+      this.projectSvc.delete(this.project.projectId).subscribe({
+        next: () => {
+          this.toast.success('Project deleted successfully');
+          this.router.navigate(['/projects']);
+        },
+        error: () => this.toast.error('Failed to delete project')
+      });
+    }
   }
 
   getIcon(lang: string): string {
     const m: Record<string, string> = {
       java: '☕', python: '🐍', javascript: '🟨', typescript: '🔷',
-      go: '🐹', rust: '🦀', html: '🌐', css: '🎨'
+      go: '🐹', rust: '🦀', html: '🌐', css: '🎨', ruby: '💎', php: '🐘'
     };
     return m[lang?.toLowerCase()] || '📄';
   }
 
   getLangColor(lang: string): string {
     const m: Record<string, string> = {
-      java: '#FFD600', python: '#1A6FFF', javascript: '#FFD600',
-      typescript: '#1A6FFF', cpp: '#FF2D2D', go: '#00C853'
+      java: '#FFD600', python: '#00C853', javascript: '#FFD600',
+      typescript: '#1A6FFF', cpp: '#FF2D2D', go: '#00C853', rust: '#FB8C00'
     };
-    return m[lang?.toLowerCase()] || '#DDD';
+    return m[lang?.toLowerCase()] || '#AAA';
   }
 }

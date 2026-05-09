@@ -19,6 +19,10 @@ import { ToastService } from '../../shared/components/toast/toast.service';
     <div class="editor-shell" #shell>
       <!-- Sidebar: File Tree -->
       <aside class="nb-sidebar" #sidebar>
+        <div class="brand-box">
+          <div class="nb-bolt">⚡</div>
+          <span class="nb-name">YOURS<span class="nb-name-accent">CODE</span></span>
+        </div>
         <div class="sidebar-header">
           <span class="p-name">{{ projectName }}</span>
           <button class="nb-icon-btn plus" (click)="showNewFileDialog = true" title="New file">+</button>
@@ -87,26 +91,33 @@ import { ToastService } from '../../shared/components/toast/toast.service';
             <div class="console-header" (click)="execPanelOpen = !execPanelOpen">
               <div class="flex items-center gap-12">
                 <span class="terminal-icon">$_</span>
-                <span class="label">CONSOLE</span>
+                <span class="label">TERMINAL / CONSOLE</span>
               </div>
               <div class="flex items-center gap-12">
                 <span class="status-chip" [class]="currentJob?.status?.toLowerCase() || ''">
-                  {{ currentJob?.status || 'IDLE' }}
+                  {{ currentJob?.status || 'READY' }}
                 </span>
                 <span class="toggle-icon">{{ execPanelOpen ? '▼' : '▲' }}</span>
               </div>
             </div>
             <div class="console-body" *ngIf="execPanelOpen">
               <div class="input-row">
-                <div class="prompt">></div>
-                <input [(ngModel)]="stdin" placeholder="Enter standard input..." class="console-input" (keydown.enter)="runCode()" />
-                <button (click)="runCode()" [disabled]="running" class="nb-btn-sm btn-green">
-                   {{ running ? 'EXECUTING...' : 'RUN' }}
+                <div class="prompt">guest@yourscode:~$</div>
+                <input [(ngModel)]="stdin" placeholder="provide stdin here..." class="console-input" (keydown.enter)="runCode()" />
+                <button (click)="runCode()" [disabled]="running" class="nb-btn-sm btn-green run-btn">
+                   {{ running ? 'EXECUTING...' : 'RUN CODE' }}
                 </button>
               </div>
               <div class="output-area">
-                <pre *ngIf="currentJob">{{ getOutput() }}</pre>
-                <div class="placeholder" *ngIf="!currentJob">Program output will appear here.</div>
+                <div class="output-hdr" *ngIf="currentJob">
+                  <span>EXIT CODE: {{ currentJob.exitCode }}</span>
+                  <span>TIME: {{ currentJob.executionTimeMs }}ms</span>
+                </div>
+                <pre *ngIf="currentJob" [class.error-out]="currentJob.stderr">{{ getOutput() }}</pre>
+                <div class="placeholder" *ngIf="!currentJob">
+                  <p>// Execution output will appear here</p>
+                  <p>// Click RUN to start the process</p>
+                </div>
               </div>
             </div>
           </div>
@@ -156,71 +167,82 @@ import { ToastService } from '../../shared/components/toast/toast.service';
     .editor-shell { display: flex; height: 100vh; background: var(--W); color: var(--K); overflow: hidden; font-family: 'Space Grotesk', sans-serif; }
 
     /* ── Sidebar ── */
-    .nb-sidebar { width: 260px; border-right: 4px solid var(--K); background: var(--O); display: flex; flex-direction: column; flex-shrink: 0; }
-    .sidebar-header { padding: 20px; border-bottom: 4px solid var(--K); display: flex; align-items: center; justify-content: space-between; background: var(--Y); }
-    .p-name { font-weight: 800; font-size: 14px; text-transform: uppercase; letter-spacing: 0.5px; overflow: hidden; text-overflow: ellipsis; }
-    .plus { width: 28px; height: 28px; background: var(--W); border: 2px solid var(--K); font-weight: 800; cursor: pointer; box-shadow: 2px 2px 0 var(--K); }
+    .nb-sidebar { width: 280px; border-right: 4px solid var(--K); background: var(--O); display: flex; flex-direction: column; flex-shrink: 0; }
+    .brand-box { height: 60px; background: var(--K); display: flex; align-items: center; padding: 0 20px; gap: 10px; border-bottom: 4px solid var(--Y); }
+    .nb-bolt { width: 30px; height: 30px; background: var(--Y); border: 2px solid rgba(255,255,255,0.2); display: flex; align-items: center; justify-content: center; font-weight: 900; font-size: 14px; }
+    .nb-name { font-family: 'Bebas Neue', sans-serif; font-size: 22px; color: var(--W); letter-spacing: 1px; }
+    .nb-name-accent { color: var(--Y); }
 
-    .file-scroller { flex: 1; overflow-y: auto; padding: 12px; display: flex; flex-direction: column; gap: 4px; }
-    .file-node { display: flex; align-items: center; gap: 10px; padding: 10px 14px; cursor: pointer; font-weight: 600; font-size: 13px; position: relative; border: 2px solid transparent; transition: all .1s; }
-    .file-node:hover { background: rgba(0,0,0,0.05); }
-    .file-node.active { background: var(--W); border-color: var(--K); box-shadow: 3px 3px 0 var(--K); }
-    .active-indicator { position: absolute; left: 0; top: 10px; bottom: 10px; width: 4px; background: var(--B); border-radius: 0 4px 4px 0; }
-    .sidebar-footer { padding: 16px; border-top: 4px solid var(--K); }
+    .sidebar-header { padding: 18px 20px; border-bottom: 4px solid var(--K); display: flex; align-items: center; justify-content: space-between; background: var(--Y); }
+    .p-name { font-weight: 800; font-size: 13px; text-transform: uppercase; letter-spacing: 0.5px; overflow: hidden; text-overflow: ellipsis; color: var(--K); }
+    .plus { width: 32px; height: 32px; background: var(--W); border: 3px solid var(--K); font-weight: 800; cursor: pointer; box-shadow: 3px 3px 0 var(--K); display: flex; align-items: center; justify-content: center; font-size: 18px; }
+    .plus:hover { transform: translate(-1px, -1px); box-shadow: 4px 4px 0 var(--K); }
+
+    .file-scroller { flex: 1; overflow-y: auto; padding: 12px; display: flex; flex-direction: column; gap: 6px; }
+    .file-node { display: flex; align-items: center; gap: 12px; padding: 12px 16px; cursor: pointer; font-weight: 700; font-size: 14px; position: relative; border: 3px solid transparent; transition: all .15s; }
+    .file-node:hover { background: rgba(0,0,0,0.06); }
+    .file-node.active { background: var(--W); border-color: var(--K); box-shadow: 4px 4px 0 var(--K); }
+    .active-indicator { position: absolute; left: 0; top: 12px; bottom: 12px; width: 4px; background: var(--B); }
+    .sidebar-footer { padding: 20px; border-top: 4px solid var(--K); background: var(--W); }
 
     /* ── Main ── */
     .nb-main { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
-    .nb-toolbar { height: 60px; display: flex; align-items: center; border-bottom: 4px solid var(--K); background: var(--W); padding: 0 16px; justify-content: space-between; }
-    .nb-tabs { display: flex; height: 100%; align-items: flex-end; }
-    .nb-tab { display: flex; align-items: center; gap: 8px; padding: 12px 20px; border: 3px solid var(--K); border-bottom: 6px solid var(--B); background: var(--O); font-weight: 700; font-size: 13px; transform: translateY(4px); }
+    .nb-toolbar { height: 60px; display: flex; align-items: center; border-bottom: 4px solid var(--K); background: var(--W); padding: 0 20px; justify-content: space-between; position: relative; z-index: 10; }
+    .nb-tabs { display: flex; height: 100%; align-items: flex-end; gap: 8px; }
+    .nb-tab { display: flex; align-items: center; gap: 10px; padding: 10px 24px; border: 4px solid var(--K); border-bottom: none; background: var(--O); font-weight: 800; font-size: 14px; transform: translateY(4px); }
 
-    .toolbar-actions { display: flex; gap: 8px; }
-    .nb-action-btn { width: 36px; height: 36px; border: 3px solid var(--K); background: var(--W); cursor: pointer; box-shadow: 3px 3px 0 var(--K); display: flex; align-items: center; justify-content: center; font-size: 16px; transition: all .1s; }
-    .nb-action-btn:active { transform: translate(1px, 1px); box-shadow: 2px 2px 0 var(--K); }
-    .nb-action-btn:disabled { opacity: 0.3; cursor: not-allowed; box-shadow: none; transform: none; }
+    .toolbar-actions { display: flex; gap: 12px; }
+    .nb-action-btn { width: 42px; height: 42px; border: 4px solid var(--K); background: var(--W); cursor: pointer; box-shadow: 4px 4px 0 var(--K); display: flex; align-items: center; justify-content: center; font-size: 18px; transition: all .1s; }
+    .nb-action-btn:hover { transform: translate(-2px, -2px); box-shadow: 6px 6px 0 var(--K); }
+    .nb-action-btn:active { transform: translate(2px, 2px); box-shadow: 2px 2px 0 var(--K); }
+    .nb-action-btn:disabled { opacity: 0.4; cursor: not-allowed; box-shadow: none; transform: none; }
     .nb-action-btn.run { background: var(--G); }
     .nb-action-btn.active { background: var(--B); color: #fff; }
 
     .editor-body { flex: 1; display: flex; flex-direction: column; overflow: hidden; position: relative; }
     .editor-container { flex: 1; background: #fff; position: relative; }
-    .nb-textarea { width: 100%; height: 100%; border: none; padding: 24px; font-family: 'JetBrains Mono', monospace; font-size: 15px; line-height: 1.6; color: #1a1a1a; outline: none; resize: none; background: #fafafa; }
+    .nb-textarea { width: 100%; height: 100%; border: none; padding: 32px; font-family: 'JetBrains Mono', monospace; font-size: 16px; line-height: 1.6; color: #1a1a1a; outline: none; resize: none; background: #fafafa; }
 
     /* ── Console ── */
-    .nb-console { border-top: 4px solid var(--K); background: var(--W); transition: height .2s; }
-    .nb-console.collapsed { height: 48px; }
-    .console-header { height: 48px; padding: 0 20px; display: flex; align-items: center; justify-content: space-between; cursor: pointer; background: var(--K); color: #fff; }
-    .terminal-icon { font-family: monospace; font-weight: 800; color: var(--G); }
-    .console-header .label { font-weight: 800; font-size: 12px; letter-spacing: 1px; }
-    .status-chip { font-size: 9px; font-weight: 800; padding: 2px 8px; border: 1px solid #444; border-radius: 100px; text-transform: uppercase; }
-    .status-chip.running { background: var(--Y); color: var(--K); }
-    .status-chip.completed { background: var(--G); color: #fff; }
+    .nb-console { border-top: 4px solid var(--K); background: var(--W); transition: all .2s cubic-bezier(0.4, 0, 0.2, 1); }
+    .nb-console.collapsed { height: 56px; }
+    .console-header { height: 56px; padding: 0 24px; display: flex; align-items: center; justify-content: space-between; cursor: pointer; background: var(--K); color: #fff; }
+    .terminal-icon { font-family: 'JetBrains Mono', monospace; font-weight: 900; color: var(--G); font-size: 18px; }
+    .console-header .label { font-weight: 900; font-size: 13px; letter-spacing: 2px; }
+    .status-chip { font-size: 10px; font-weight: 900; padding: 3px 10px; border: 2px solid #444; text-transform: uppercase; letter-spacing: 1px; }
+    .status-chip.running { background: var(--Y); color: var(--K); border-color: var(--Y); }
+    .status-chip.completed { background: var(--G); color: #fff; border-color: var(--G); }
 
-    .console-body { padding: 16px; background: var(--O); height: 260px; display: flex; flex-direction: column; gap: 12px; }
-    .input-row { display: flex; align-items: center; gap: 10px; border: 3px solid var(--K); background: var(--W); padding: 4px 8px; box-shadow: 4px 4px 0 var(--K); }
-    .prompt { font-family: monospace; font-weight: 800; color: var(--B); }
-    .console-input { flex: 1; border: none; outline: none; font-family: 'JetBrains Mono', monospace; font-size: 14px; background: transparent; }
-    .output-area { flex: 1; border: 3px solid var(--K); background: #000; color: var(--G); padding: 12px; font-family: 'JetBrains Mono', monospace; font-size: 13px; overflow-y: auto; box-shadow: inset 0 2px 10px rgba(0,0,0,0.5); }
-    .output-area pre { margin: 0; white-space: pre-wrap; }
-    .output-area .placeholder { color: #555; font-style: italic; }
+    .console-body { padding: 20px; background: #0A0A0A; height: 320px; display: flex; flex-direction: column; gap: 16px; }
+    .input-row { display: flex; align-items: center; gap: 12px; border: 4px solid var(--W); background: #111; padding: 6px 12px; }
+    .prompt { font-family: 'JetBrains Mono', monospace; font-weight: 800; color: var(--G); font-size: 13px; }
+    .console-input { flex: 1; border: none; outline: none; font-family: 'JetBrains Mono', monospace; font-size: 14px; background: transparent; color: #fff; }
+    .run-btn { height: 40px; padding: 0 24px; }
+    .output-area { flex: 1; border: 4px solid #333; background: #000; color: #eee; padding: 16px; font-family: 'JetBrains Mono', monospace; font-size: 14px; overflow-y: auto; }
+    .output-hdr { display: flex; gap: 24px; font-size: 11px; font-weight: 800; color: #666; margin-bottom: 12px; border-bottom: 1px solid #222; padding-bottom: 8px; }
+    .output-area pre { margin: 0; white-space: pre-wrap; line-height: 1.5; }
+    .output-area .error-out { color: var(--R); }
+    .output-area .placeholder { color: #444; font-weight: 700; display: flex; flex-direction: column; justify-content: center; align-items: center; height: 100%; gap: 8px; }
 
     /* ── Right Panel ── */
-    .nb-right-panel { width: 320px; border-left: 4px solid var(--K); background: var(--W); display: flex; flex-direction: column; flex-shrink: 0; }
-    .rp-header { padding: 20px; border-bottom: 4px solid var(--K); background: var(--B); color: #fff; display: flex; align-items: center; justify-content: space-between; }
-    .rp-header .label { font-weight: 800; font-size: 14px; letter-spacing: 1px; }
-    .close-btn { background: none; border: none; color: #fff; font-size: 20px; cursor: pointer; }
+    .nb-right-panel { width: 360px; border-left: 4px solid var(--K); background: var(--W); display: flex; flex-direction: column; flex-shrink: 0; }
+    .rp-header { padding: 24px; border-bottom: 4px solid var(--K); background: var(--B); color: #fff; display: flex; align-items: center; justify-content: space-between; }
+    .rp-header .label { font-weight: 900; font-size: 16px; letter-spacing: 2px; }
+    .close-btn { background: none; border: none; color: #fff; font-size: 24px; cursor: pointer; font-weight: 900; }
 
-    .rp-content { flex: 1; overflow-y: auto; padding: 16px; background: var(--O); }
-    .nb-comment-card, .nb-version-card { border: 3px solid var(--K); background: var(--W); padding: 16px; margin-bottom: 12px; box-shadow: 4px 4px 0 var(--K); }
-    .c-meta, .v-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
-    .c-user { font-weight: 800; font-size: 11px; color: var(--B); }
-    .c-line { font-size: 10px; font-weight: 800; color: #888; }
-    .c-resolve { font-size: 9px; font-weight: 800; border: 1px solid var(--K); padding: 1px 6px; cursor: pointer; }
-    .c-text { font-size: 13px; color: #333; line-height: 1.5; }
-    .c-text.resolved { text-decoration: line-through; opacity: 0.5; }
+    .rp-content { flex: 1; overflow-y: auto; padding: 20px; background: var(--O); }
+    .nb-comment-card, .nb-version-card { border: 4px solid var(--K); background: var(--W); padding: 20px; margin-bottom: 16px; box-shadow: 6px 6px 0 var(--K); }
+    .c-meta, .v-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
+    .c-user { font-weight: 900; font-size: 12px; color: var(--B); }
+    .c-line { font-size: 11px; font-weight: 900; color: #888; background: var(--O); padding: 2px 6px; }
+    .c-resolve { font-size: 10px; font-weight: 900; border: 2px solid var(--K); padding: 2px 8px; cursor: pointer; background: var(--Y); }
+    .c-text { font-size: 14px; color: #1a1a1a; line-height: 1.5; font-weight: 500; }
+    .c-text.resolved { text-decoration: line-through; opacity: 0.4; }
 
-    .nb-textarea-sm { width: 100%; border: 3px solid var(--K); padding: 10px; font-family: inherit; font-size: 13px; box-sizing: border-box; resize: vertical; }
+    .nb-textarea-sm { width: 100%; border: 4px solid var(--K); padding: 12px; font-family: inherit; font-size: 14px; font-weight: 600; box-sizing: border-box; resize: vertical; }
 
-    .nb-btn-sm { border: 2px solid var(--K); padding: 6px 12px; font-weight: 800; font-size: 11px; cursor: pointer; box-shadow: 2px 2px 0 var(--K); text-transform: uppercase; }
+    .nb-btn-sm { border: 3px solid var(--K); padding: 8px 16px; font-weight: 800; font-size: 12px; cursor: pointer; box-shadow: 4px 4px 0 var(--K); text-transform: uppercase; transition: all .1s; }
+    .nb-btn-sm:hover { transform: translate(-1px, -1px); box-shadow: 5px 5px 0 var(--K); }
     .btn-blue { background: var(--B); color: #fff; }
     .btn-green { background: var(--G); color: #fff; }
     .btn-yellow { background: var(--Y); color: var(--K); }
@@ -235,8 +257,8 @@ import { ToastService } from '../../shared/components/toast/toast.service';
 
     /* ── Cursors ── */
     .remote-cursor { position: absolute; pointer-events: none; }
-    .cursor-bar { width: 2px; height: 20px; background: var(--Y); }
-    .cursor-label { position: absolute; top: -18px; left: 0; background: var(--Y); color: var(--K); font-size: 10px; font-weight: 800; padding: 1px 6px; white-space: nowrap; border: 1px solid var(--K); }
+    .cursor-bar { width: 3px; height: 24px; background: var(--Y); }
+    .cursor-label { position: absolute; top: -20px; left: 0; background: var(--Y); color: var(--K); font-size: 11px; font-weight: 900; padding: 2px 8px; white-space: nowrap; border: 2px solid var(--K); box-shadow: 2px 2px 0 var(--K); }
   `]
 })
 export class EditorComponent implements OnInit, OnDestroy, AfterViewInit {
