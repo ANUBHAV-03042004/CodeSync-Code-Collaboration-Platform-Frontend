@@ -102,7 +102,7 @@ import { ToastService } from '../../shared/components/toast/toast.service';
             </div>
             <div class="console-body" *ngIf="execPanelOpen">
               <div class="input-row">
-                <div class="prompt">guest@yourscode:~$</div>
+                <div class="prompt">guest&#64;yourscode:~$</div>
                 <input [(ngModel)]="stdin" placeholder="provide stdin here..." class="console-input" (keydown.enter)="runCode()" />
                 <button (click)="runCode()" [disabled]="running" class="nb-btn-sm btn-green run-btn">
                    {{ running ? 'EXECUTING...' : 'RUN CODE' }}

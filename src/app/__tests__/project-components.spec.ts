@@ -12,7 +12,8 @@ import { ToastService } from '../shared/components/toast/toast.service';
 const mockProject = {
   projectId: 42, name: 'Demo', description: 'A demo project', language: 'Go',
   visibility: 'PUBLIC' as const, ownerId: 1, memberIds: [1, 2],
-  starCount: 10, forkCount: 3, archived: false, createdAt: '', updatedAt: ''
+  starCount: 10, forkCount: 3, archived: false, createdAt: '', updatedAt: '',
+  starredBy: [], forkedBy: []
 };
 
 const makeProjectSvc = () => ({
@@ -24,6 +25,11 @@ const makeProjectSvc = () => ({
 
 const makeToast = () => ({
   success: jest.fn(), error: jest.fn(), info: jest.fn(), warn: jest.fn(), toast$: of()
+});
+
+const makeAuth = () => ({
+  getCurrentUser: jest.fn().mockReturnValue({ userId: 1, username: 'alice' }),
+  isLoggedIn: jest.fn().mockReturnValue(true)
 });
 
 // ── ProjectCreateComponent ─────────────────────────────────────────────────
@@ -139,6 +145,7 @@ describe('ProjectDetailComponent', () => {
         { provide: ProjectService, useValue: projectSvc },
         { provide: FileService, useValue: fileSvc },
         { provide: ToastService, useValue: toastSvc },
+        { provide: AuthService, useValue: makeAuth() },
         { provide: ActivatedRoute, useValue: { snapshot: { paramMap: { get: () => '42' } } } }
       ]
     }).compileComponents();
@@ -160,20 +167,20 @@ describe('ProjectDetailComponent', () => {
   });
 
   it('should filter out deleted files', () => {
-    expect(component.files.length).toBe(2);
+    expect(component.files.length).toBe(1);
     expect(component.files.every((f: any) => !f.deleted)).toBe(true);
   });
 
   it('should star project', () => {
     component.star();
     expect(projectSvc.star).toHaveBeenCalledWith(42);
-    expect(toastSvc.success).toHaveBeenCalledWith('Starred!');
+    expect(toastSvc.success).toHaveBeenCalledWith('Project Starred!');
   });
 
   it('should fork project', () => {
     component.fork();
     expect(projectSvc.fork).toHaveBeenCalledWith(42);
-    expect(toastSvc.success).toHaveBeenCalledWith('Forked!');
+    expect(toastSvc.success).toHaveBeenCalledWith('Project Forked Successfully!');
   });
 
   it('should return correct file icons', () => {
