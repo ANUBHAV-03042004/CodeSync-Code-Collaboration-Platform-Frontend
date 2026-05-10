@@ -3,8 +3,7 @@ dist/
 .angular/
 coverage/
 .gitignore
-# Never commit prod secrets — CI generates this file from GitHub Secrets
-src/environments/environment.prod.ts
+# src/environments/environment.prod.ts (Safe to commit now as it only contains placeholders)
 
 .vscode/
 .idea/
