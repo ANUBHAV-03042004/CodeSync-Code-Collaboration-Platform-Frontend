@@ -69,7 +69,7 @@ export interface CodeFile {
   path: string;
   language: string;
   content: string;
-  fileType: FileType;
+  folder: boolean;
   deleted: boolean;
   createdBy: number;
   lastEditedBy: number;
@@ -153,7 +153,7 @@ export interface SubmitExecutionRequest {
 
 // ── Version / Snapshot ────────────────────────────────────────────────────────
 export interface Snapshot {
-  id: number;
+  snapshotId: number;
   projectId: number;
   fileId: number;
   authorId: number;
