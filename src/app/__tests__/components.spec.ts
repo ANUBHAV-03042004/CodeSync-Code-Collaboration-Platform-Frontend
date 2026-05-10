@@ -255,7 +255,7 @@ describe('DashboardComponent', () => {
     projectId: 1, name: 'MyProject', description: 'desc', language: 'Java',
     visibility: 'PUBLIC', ownerId: 1, memberIds: [], starCount: 3, forkCount: 1, archived: false,
     starredBy: [], forkedBy: [], createdAt: '', updatedAt: ''
-  };
+  } as any;
 
   beforeEach(async () => {
     projectSvc = createProjectSvcMock();
@@ -317,7 +317,7 @@ describe('ProjectListComponent', () => {
 
   const mockProject = { projectId: 1, name: 'Test', description: '', language: 'Go',
     visibility: 'PUBLIC', ownerId: 1, memberIds: [], starCount: 0, forkCount: 0, archived: false,
-    starredBy: [], forkedBy: [], createdAt: '', updatedAt: '' };
+    starredBy: [], forkedBy: [], createdAt: '', updatedAt: '' } as any;
 
   beforeEach(async () => {
     projectSvc = createProjectSvcMock();
