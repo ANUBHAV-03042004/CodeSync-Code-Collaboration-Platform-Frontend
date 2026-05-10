@@ -48,13 +48,16 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Build Angular (production)
-        run: npm run build -- --configuration=production
+      - name: Generate Environment File
+        run: node write-env.js
         env:
           ANGULAR_API_BASE: ${{ secrets.ANGULAR_API_BASE }}
           ANGULAR_WS_COLLAB: ${{ secrets.ANGULAR_WS_COLLAB }}
           ANGULAR_WS_NOTIF: ${{ secrets.ANGULAR_WS_NOTIF }}
           ANGULAR_WS_EXEC: ${{ secrets.ANGULAR_WS_EXEC }}
+
+      - name: Build Angular (production)
+        run: npm run build -- --configuration=production
 
       - name: Deploy to Netlify
         run: |
