@@ -611,7 +611,7 @@ export class ProjectDetailComponent implements OnInit, AfterViewInit {
   ngOnInit(): void {
     const id = Number(this.route.snapshot.paramMap.get('id'));
     this.loadProject(id);
-    this.fileSvc.getTree(id).subscribe(f => this.files = f.filter(x => !x.deleted && x.fileType === 'FILE'));
+    this.fileSvc.getTree(id).subscribe(files => this.files = files.filter(f => !f.deleted && !f.folder));
   }
 
   loadProject(id: number): void {

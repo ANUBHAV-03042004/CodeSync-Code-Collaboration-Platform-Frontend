@@ -42,7 +42,10 @@ import { ToastService } from '../../shared/components/toast/toast.service';
         </div>
         <div class="sidebar-footer">
            <button class="nb-btn-sm btn-yellow w-full" (click)="toggleCollab()">
-             {{ sessionId ? '🔴 LEAVE COLLAB' : '👥 START COLLAB' }}
+             {{ sessionId ? '🔴 STOP COLLAB' : '👥 START COLLAB' }}
+           </button>
+           <button class="nb-btn-sm btn-white w-full mt-8" *ngIf="sessionId" (click)="copyInviteLink()">
+             🔗 COPY INVITE LINK
            </button>
         </div>
       </aside>
@@ -161,7 +164,7 @@ import { ToastService } from '../../shared/components/toast/toast.service';
                 <span class="v-tag">{{ snap.branch }}</span>
               </div>
               <div class="v-meta">v{{ snap.version }} · {{ snap.createdAt | date:'MMM d, HH:mm' }}</div>
-              <button class="nb-btn-sm btn-white w-full mt-8" (click)="restoreSnapshot(snap.id)">RESTORE</button>
+              <button class="nb-btn-sm btn-white w-full mt-8" (click)="restoreSnapshot(snap.snapshotId)">RESTORE</button>
             </div>
             <div class="empty-hint" *ngIf="!snapshots.length">No snapshots found.</div>
           </div>
@@ -322,6 +325,13 @@ export class EditorComponent implements OnInit, OnDestroy, AfterViewInit {
       return;
     }
     this.loadFiles();
+    // Check for session in query params to auto-join collab
+    const sess = this.route.snapshot.queryParamMap.get('session');
+    if (sess) {
+      this.sessionId = sess;
+      this.collabSvc.connectToSession(sess);
+      this.toast.success('Joined collaboration session!');
+    }
     // In a real app, fetch project name here
     this.projectName = `Project #${this.projectId}`;
   }
@@ -330,7 +340,7 @@ export class EditorComponent implements OnInit, OnDestroy, AfterViewInit {
     this.loading = true;
     this.fileSvc.getTree(this.projectId).subscribe({
       next: files => {
-        this.files = files.filter(f => !f.deleted && f.fileType === 'FILE');
+        this.files = files.filter(f => !f.deleted && !f.folder);
         if (this.files.length && !this.activeFile) this.openFile(this.files[0]);
         this.loading = false;
       },
@@ -525,8 +535,8 @@ export class EditorComponent implements OnInit, OnDestroy, AfterViewInit {
     });
   }
 
-  restoreSnapshot(id: number): void {
-    this.versionSvc.restore(id).subscribe(snap => {
+  restoreSnapshot(snapshotId: number): void {
+    this.versionSvc.restore(snapshotId).subscribe(snap => {
       this.editorContent = snap.content;
       this.unsaved = true;
       this.toast.success('Restored snapshot content');
@@ -550,7 +560,24 @@ export class EditorComponent implements OnInit, OnDestroy, AfterViewInit {
     }).subscribe(s => {
       this.sessionId = s.sessionId;
       this.collabSvc.connectToSession(s.sessionId);
-      this.toast.success('Collaboration active');
+      
+      // Auto-copy invite link
+      const inviteUrl = `${window.location.origin}/editor/${this.projectId}?session=${s.sessionId}`;
+      navigator.clipboard.writeText(inviteUrl).then(() => {
+        this.toast.success('Collaboration active! Invite link copied to clipboard.');
+      }).catch(() => {
+        this.toast.success('Collaboration active!');
+      });
+    });
+  }
+
+  copyInviteLink(): void {
+    if (!this.sessionId) return;
+    const inviteUrl = `${window.location.origin}/editor/${this.projectId}?session=${this.sessionId}`;
+    navigator.clipboard.writeText(inviteUrl).then(() => {
+      this.toast.success('Invite link copied to clipboard!');
+    }).catch(() => {
+      this.toast.error('Failed to copy link.');
     });
   }
 
