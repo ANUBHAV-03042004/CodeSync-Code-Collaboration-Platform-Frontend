@@ -615,10 +615,13 @@ export class ProjectDetailComponent implements OnInit, AfterViewInit {
         gsap.fromTo(this.heroRef.nativeElement,
           { opacity: 0, y: 40 }, { opacity: 1, y: 0, duration: 0.7, ease: 'power4.out' });
       }
-      if (this.statsRef) {
-        gsap.fromTo(this.statsRef.nativeElement.querySelectorAll('.stat-card'),
-          { opacity: 0, scale: 0.8 },
-          { opacity: 1, scale: 1, duration: 0.5, stagger: 0.1, ease: 'back.out(1.7)', delay: 0.2 });
+      if (this.statsRef?.nativeElement) {
+        const targets = this.statsRef.nativeElement.querySelectorAll('.stat-card');
+        if (targets.length) {
+          gsap.fromTo(targets,
+            { opacity: 0, scale: 0.8 },
+            { opacity: 1, scale: 1, duration: 0.5, stagger: 0.1, ease: 'back.out(1.7)', delay: 0.2 });
+        }
       }
       if (this.mainColRef) {
         gsap.fromTo(this.mainColRef.nativeElement,

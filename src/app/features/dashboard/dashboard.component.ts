@@ -250,11 +250,15 @@ export class DashboardComponent implements OnInit, AfterViewInit {
     const tl = gsap.timeline();
     tl.fromTo(this.headerRef.nativeElement,
         { opacity:0, y:-24 }, { opacity:1, y:0, duration:.5, ease:'power3.out' })
-      .fromTo(this.statsRef.nativeElement.querySelectorAll('.sc'),
-        { y:40, opacity:0, rotation:3 }, { y:0, opacity:1, rotation:0, duration:.5, stagger:.1, ease:'back.out(1.2)' }, '-=.1')
-      .fromTo(this.quickActRef?.nativeElement?.querySelectorAll('.qa-card') || [],
-        { y:20, opacity:0 }, { y:0, opacity:1, duration:.3, stagger:.06, ease:'power2.out' }, '-=.1')
-      .fromTo('.sec-row',
+      if (this.statsRef?.nativeElement) {
+        tl.fromTo(this.statsRef.nativeElement.querySelectorAll('.sc'),
+          { y:40, opacity:0, rotation:3 }, { y:0, opacity:1, rotation:0, duration:.5, stagger:.1, ease:'back.out(1.2)' }, '-=.1');
+      }
+      if (this.quickActRef?.nativeElement) {
+        tl.fromTo(this.quickActRef.nativeElement.querySelectorAll('.qa-card'),
+          { y:20, opacity:0 }, { y:0, opacity:1, duration:.3, stagger:.06, ease:'power2.out' }, '-=.1');
+      }
+      tl.fromTo('.sec-row',
         { x:-20, opacity:0 }, { x:0, opacity:1, duration:.4, stagger:.1, ease:'power2.out' }, '-=.1')
       .fromTo('.proj-card, .new-card',
         { y:28, opacity:0 }, { y:0, opacity:1, duration:.4, stagger:.06, ease:'power2.out' }, '-=.1');

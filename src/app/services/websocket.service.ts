@@ -30,7 +30,12 @@ export class WebSocketService implements OnDestroy {
       // 'Access-Control-Allow-Credentials must be true'. Limiting to
       // ['websocket'] bypasses the XHR info endpoint entirely and connects
       // directly over native WebSocket, which is not subject to CORS preflight.
-      webSocketFactory: () => new SockJS(endpoint, null, { transports: ['websocket'] }) as IStompSocket,
+      webSocketFactory: () => {
+        // Sanitize endpoint: remove trailing '/websocket' if present
+        // SockJS appends its own transport segments, so a double '/websocket' causes 404.
+        const sanitized = endpoint.endsWith('/websocket') ? endpoint.slice(0, -10) : endpoint;
+        return new SockJS(sanitized, null, { transports: ['websocket'] }) as IStompSocket;
+      },
       connectHeaders: token ? { Authorization: `Bearer ${token}` } : {},
       reconnectDelay: 5000,
       onConnect: () => status$.next(true),
