@@ -48,10 +48,16 @@ export class Oauth2CallbackComponent implements OnInit {
   private authSvc = inject(AuthService);
 
   ngOnInit(): void {
-    // Backend sends: /oauth2/callback#token=xxx&refreshToken=yyy
-    // window.location.hash gives us "#token=xxx&refreshToken=yyy"
+    // Extract tokens from either fragment (#) or query params (?)
     const fragment = window.location.hash;
-    const params   = new URLSearchParams(fragment.startsWith('#') ? fragment.substring(1) : fragment);
+    const search   = window.location.search;
+    
+    let params: URLSearchParams;
+    if (fragment) {
+      params = new URLSearchParams(fragment.startsWith('#') ? fragment.substring(1) : fragment);
+    } else {
+      params = new URLSearchParams(search);
+    }
 
     const token        = params.get('token');
     const refreshToken = params.get('refreshToken');

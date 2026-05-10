@@ -25,8 +25,10 @@ export class AppComponent implements OnInit {
   private noNavRoutes = ['/login', '/register', '/forgot-password', '/reset-password', '/oauth2/callback'];
   constructor(private router: Router) {}
   ngOnInit(): void {
+    console.log('AppComponent initialized. API Base:', environment.apiBase);
     this.router.events.pipe(filter(e => e instanceof NavigationEnd))
       .subscribe((e: any) => {
+        console.log('NavigationEnd:', e.urlAfterRedirects);
         this.showNav = !this.noNavRoutes.some(r => e.urlAfterRedirects.startsWith(r));
       });
   }
