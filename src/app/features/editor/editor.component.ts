@@ -1,6 +1,6 @@
-import { Component, OnInit, OnDestroy, AfterViewInit, ElementRef, ViewChild, inject } from '@angular/core';
+import { Component, OnInit, OnDestroy, AfterViewInit, ElementRef, ViewChild, inject, NgZone } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { ActivatedRoute, RouterLink } from '@angular/router';
+import { ActivatedRoute, RouterLink, Router } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { gsap } from 'gsap';
 import { Subscription } from 'rxjs';
@@ -8,23 +8,23 @@ import { FileService } from '../../services/file.service';
 import { CollabService } from '../../services/collab.service';
 import { ExecutionService, VersionService, CommentService } from '../../services/other-services';
 import { AuthService } from '../../services/auth.service';
-import { CodeFile, ExecutionJob, CollabSession, CursorPosition } from '../../core/models';
+import { CodeFile, ExecutionJob, CursorPosition, Snapshot, Comment } from '../../core/models';
 import { ToastService } from '../../shared/components/toast/toast.service';
 
 @Component({
   selector: 'app-editor',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, RouterLink],
   template: `
     <div class="editor-shell" #shell>
       <!-- Sidebar: File Tree -->
       <aside class="nb-sidebar" #sidebar>
-        <div class="brand-box">
+        <div class="brand-box" routerLink="/dashboard" style="cursor:pointer">
           <div class="nb-bolt">⚡</div>
           <span class="nb-name">YOURS<span class="nb-name-accent">CODE</span></span>
         </div>
         <div class="sidebar-header">
-          <span class="p-name">{{ projectName }}</span>
+          <span class="p-name" [title]="projectName">{{ projectName }}</span>
           <button class="nb-icon-btn plus" (click)="showNewFileDialog = true" title="New file">+</button>
         </div>
         <div class="file-scroller">
@@ -35,6 +35,9 @@ import { ToastService } from '../../shared/components/toast/toast.service';
             <span class="f-icon">{{ getFileIcon(f.language) }}</span>
             <span class="f-name">{{ f.name }}</span>
             <div class="active-indicator" *ngIf="f.fileId === activeFile?.fileId"></div>
+          </div>
+          <div class="empty-files" *ngIf="!files.length && !loading">
+            <p>No files yet.</p>
           </div>
         </div>
         <div class="sidebar-footer">
@@ -57,22 +60,23 @@ import { ToastService } from '../../shared/components/toast/toast.service';
           </div>
 
           <div class="toolbar-actions">
-            <button class="nb-action-btn" (click)="save()" [disabled]="!unsaved" title="Save">💾</button>
-            <button class="nb-action-btn run" (click)="runCode()" [disabled]="running" title="Run">▶</button>
-            <button class="nb-action-btn" (click)="createSnapshot()" title="Snapshot">📸</button>
-            <button class="nb-action-btn" (click)="toggleVersions()" [class.active]="rightPanelMode === 'versions'" title="History">🕒</button>
-            <button class="nb-action-btn" (click)="rightPanelMode = 'comments'" [class.active]="rightPanelMode === 'comments'" title="Comments">💬</button>
+            <button class="nb-action-btn" (click)="save()" [disabled]="!unsaved || !activeFile" title="Save">💾</button>
+            <button class="nb-action-btn run" (click)="runCode()" [disabled]="running || !activeFile" title="Run">▶</button>
+            <button class="nb-action-btn" (click)="createSnapshot()" [disabled]="!activeFile" title="Snapshot">📸</button>
+            <button class="nb-action-btn" (click)="toggleVersions()" [class.active]="rightPanelMode === 'versions'" [disabled]="!activeFile" title="History">🕒</button>
+            <button class="nb-action-btn" (click)="toggleComments()" [class.active]="rightPanelMode === 'comments'" [disabled]="!activeFile" title="Comments">💬</button>
           </div>
         </div>
 
         <div class="editor-body">
           <!-- Monaco Placeholder -->
-          <div class="editor-container" #monacoContainer>
+          <div class="editor-container">
              <textarea class="nb-textarea"
                        [(ngModel)]="editorContent"
                        (input)="onContentChange()"
                        (keydown)="onKeydown($event)"
-                       placeholder="Select a file to start coding..."
+                       [placeholder]="activeFile ? 'Start coding...' : 'Select a file to start coding...'"
+                       [disabled]="!activeFile"
                        [spellcheck]="false"></textarea>
 
              <!-- Remote Cursors -->
@@ -104,7 +108,7 @@ import { ToastService } from '../../shared/components/toast/toast.service';
               <div class="input-row">
                 <div class="prompt">guest&#64;yourscode:~$</div>
                 <input [(ngModel)]="stdin" placeholder="provide stdin here..." class="console-input" (keydown.enter)="runCode()" />
-                <button (click)="runCode()" [disabled]="running" class="nb-btn-sm btn-green run-btn">
+                <button (click)="runCode()" [disabled]="running || !activeFile" class="nb-btn-sm btn-green run-btn">
                    {{ running ? 'EXECUTING...' : 'RUN CODE' }}
                 </button>
               </div>
@@ -126,7 +130,7 @@ import { ToastService } from '../../shared/components/toast/toast.service';
 
       <!-- Right Panel -->
       <aside class="nb-right-panel" *ngIf="rightPanelMode" #rightPanel>
-        <div class="rp-header">
+        <div class="rp-header" [class.bg-B]="rightPanelMode === 'comments'" [class.bg-Y]="rightPanelMode === 'versions'">
           <span class="label">{{ rightPanelMode === 'comments' ? 'COMMENTS' : 'SNAPSHOTS' }}</span>
           <button class="close-btn" (click)="rightPanelMode = null">✕</button>
         </div>
@@ -144,8 +148,9 @@ import { ToastService } from '../../shared/components/toast/toast.service';
             </div>
             <div class="comment-input-box">
               <textarea [(ngModel)]="newComment" placeholder="Write a comment..." class="nb-textarea-sm"></textarea>
-              <button (click)="addComment()" class="nb-btn-sm btn-blue w-full mt-8">POST COMMENT</button>
+              <button (click)="addComment()" [disabled]="!newComment.trim()" class="nb-btn-sm btn-blue w-full mt-8">POST COMMENT</button>
             </div>
+            <div class="empty-hint" *ngIf="!comments.length">No comments yet.</div>
           </div>
 
           <!-- Version History Mode -->
@@ -155,18 +160,20 @@ import { ToastService } from '../../shared/components/toast/toast.service';
                 <span class="v-msg">{{ snap.message }}</span>
                 <span class="v-tag">{{ snap.branch }}</span>
               </div>
-              <div class="v-meta">v{{ snap.version }} · {{ snap.createdAt | date:'shortTime' }}</div>
+              <div class="v-meta">v{{ snap.version }} · {{ snap.createdAt | date:'MMM d, HH:mm' }}</div>
               <button class="nb-btn-sm btn-white w-full mt-8" (click)="restoreSnapshot(snap.id)">RESTORE</button>
             </div>
+            <div class="empty-hint" *ngIf="!snapshots.length">No snapshots found.</div>
           </div>
         </div>
       </aside>
-      <!-- New File Dialog -->
+
+      <!-- New File Modal -->
       <div class="nb-modal-overlay" *ngIf="showNewFileDialog">
         <div class="nb-modal">
           <div class="modal-hdr">NEW FILE</div>
           <div class="modal-body">
-            <input [(ngModel)]="newFileName" placeholder="filename.js" class="nb-input w-full" (keydown.enter)="createFile()" />
+            <input [(ngModel)]="newFileName" placeholder="filename.js" class="nb-input w-full" (keydown.enter)="createFile()" #newFileInput />
             <div class="modal-actions mt-16">
               <button class="nb-btn-sm btn-white" (click)="showNewFileDialog = false">CANCEL</button>
               <button class="nb-btn-sm btn-yellow" (click)="createFile()">CREATE</button>
@@ -177,10 +184,7 @@ import { ToastService } from '../../shared/components/toast/toast.service';
     </div>
   `,
   styles: [`
-    .nb-editor-marker { position: absolute; top: 10px; right: 80px; z-index: 1000; background: var(--Y); border: 3px solid var(--K); padding: 4px 12px; font-weight: 900; font-size: 11px; box-shadow: 4px 4px 0 var(--K); pointer-events: none; }
     .editor-shell { display: flex; height: 100vh; background: var(--W); color: var(--K); overflow: hidden; font-family: 'Space Grotesk', sans-serif; position: relative; }
-
-    /* ── Sidebar ── */
     .nb-sidebar { width: 280px; border-right: 4px solid var(--K); background: var(--O); display: flex; flex-direction: column; flex-shrink: 0; }
     .brand-box { height: 60px; background: var(--K); display: flex; align-items: center; padding: 0 20px; gap: 10px; border-bottom: 4px solid var(--Y); }
     .nb-bolt { width: 30px; height: 30px; background: var(--Y); border: 2px solid rgba(255,255,255,0.2); display: flex; align-items: center; justify-content: center; font-weight: 900; font-size: 14px; }
@@ -188,10 +192,9 @@ import { ToastService } from '../../shared/components/toast/toast.service';
     .nb-name-accent { color: var(--Y); }
 
     .sidebar-header { padding: 18px 20px; border-bottom: 4px solid var(--K); display: flex; align-items: center; justify-content: space-between; background: var(--Y); }
-    .p-name { font-weight: 800; font-size: 13px; text-transform: uppercase; letter-spacing: 0.5px; overflow: hidden; text-overflow: ellipsis; color: var(--K); }
+    .p-name { font-weight: 800; font-size: 13px; text-transform: uppercase; letter-spacing: 0.5px; overflow: hidden; text-overflow: ellipsis; color: var(--K); white-space: nowrap; max-width: 180px; }
     .plus { width: 32px; height: 32px; background: var(--W); border: 3px solid var(--K); font-weight: 800; cursor: pointer; box-shadow: 3px 3px 0 var(--K); display: flex; align-items: center; justify-content: center; font-size: 18px; }
-    .plus:hover { transform: translate(-1px, -1px); box-shadow: 4px 4px 0 var(--K); }
-
+    
     .file-scroller { flex: 1; overflow-y: auto; padding: 12px; display: flex; flex-direction: column; gap: 6px; }
     .file-node { display: flex; align-items: center; gap: 12px; padding: 12px 16px; cursor: pointer; font-weight: 700; font-size: 14px; position: relative; border: 3px solid transparent; transition: all .15s; }
     .file-node:hover { background: rgba(0,0,0,0.06); }
@@ -199,88 +202,75 @@ import { ToastService } from '../../shared/components/toast/toast.service';
     .active-indicator { position: absolute; left: 0; top: 12px; bottom: 12px; width: 4px; background: var(--B); }
     .sidebar-footer { padding: 20px; border-top: 4px solid var(--K); background: var(--W); }
 
-    /* ── Main ── */
     .nb-main { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
-    .nb-toolbar { height: 60px; display: flex; align-items: center; border-bottom: 4px solid var(--K); background: var(--W); padding: 0 20px; justify-content: space-between; position: relative; z-index: 10; }
+    .nb-toolbar { height: 60px; display: flex; align-items: center; border-bottom: 4px solid var(--K); background: var(--W); padding: 0 20px; justify-content: space-between; z-index: 10; }
     .nb-tabs { display: flex; height: 100%; align-items: flex-end; gap: 8px; }
     .nb-tab { display: flex; align-items: center; gap: 10px; padding: 10px 24px; border: 4px solid var(--K); border-bottom: none; background: var(--O); font-weight: 800; font-size: 14px; transform: translateY(4px); }
 
     .toolbar-actions { display: flex; gap: 12px; }
     .nb-action-btn { width: 42px; height: 42px; border: 4px solid var(--K); background: var(--W); cursor: pointer; box-shadow: 4px 4px 0 var(--K); display: flex; align-items: center; justify-content: center; font-size: 18px; transition: all .1s; }
-    .nb-action-btn:hover { transform: translate(-2px, -2px); box-shadow: 6px 6px 0 var(--K); }
-    .nb-action-btn:active { transform: translate(2px, 2px); box-shadow: 2px 2px 0 var(--K); }
-    .nb-action-btn:disabled { opacity: 0.4; cursor: not-allowed; box-shadow: none; transform: none; }
+    .nb-action-btn:hover:not(:disabled) { transform: translate(-2px, -2px); box-shadow: 6px 6px 0 var(--K); }
+    .nb-action-btn:disabled { opacity: 0.4; cursor: not-allowed; }
     .nb-action-btn.run { background: var(--G); }
-    .nb-action-btn.active { background: var(--B); color: #fff; }
+    .nb-action-btn.active { background: var(--K); color: #fff; }
 
     .editor-body { flex: 1; display: flex; flex-direction: column; overflow: hidden; position: relative; }
     .editor-container { flex: 1; background: #fff; position: relative; }
     .nb-textarea { width: 100%; height: 100%; border: none; padding: 32px; font-family: 'JetBrains Mono', monospace; font-size: 16px; line-height: 1.6; color: #1a1a1a; outline: none; resize: none; background: #fafafa; }
 
-    /* ── Console ── */
-    .nb-console { border-top: 4px solid var(--K); background: var(--W); transition: all .2s cubic-bezier(0.4, 0, 0.2, 1); }
+    .nb-console { border-top: 4px solid var(--K); background: var(--W); transition: height .2s; }
     .nb-console.collapsed { height: 56px; }
     .console-header { height: 56px; padding: 0 24px; display: flex; align-items: center; justify-content: space-between; cursor: pointer; background: var(--K); color: #fff; }
     .terminal-icon { font-family: 'JetBrains Mono', monospace; font-weight: 900; color: var(--G); font-size: 18px; }
     .console-header .label { font-weight: 900; font-size: 13px; letter-spacing: 2px; }
-    .status-chip { font-size: 10px; font-weight: 900; padding: 3px 10px; border: 2px solid #444; text-transform: uppercase; letter-spacing: 1px; }
-    .status-chip.running { background: var(--Y); color: var(--K); border-color: var(--Y); }
-    .status-chip.completed { background: var(--G); color: #fff; border-color: var(--G); }
+    .status-chip { font-size: 10px; font-weight: 900; padding: 3px 10px; border: 2px solid #444; text-transform: uppercase; }
+    .status-chip.running { background: var(--Y); color: var(--K); }
+    .status-chip.completed { background: var(--G); color: #fff; }
 
     .console-body { padding: 20px; background: #0A0A0A; height: 320px; display: flex; flex-direction: column; gap: 16px; }
     .input-row { display: flex; align-items: center; gap: 12px; border: 4px solid var(--W); background: #111; padding: 6px 12px; }
-    .prompt { font-family: 'JetBrains Mono', monospace; font-weight: 800; color: var(--G); font-size: 13px; }
-    .console-input { flex: 1; border: none; outline: none; font-family: 'JetBrains Mono', monospace; font-size: 14px; background: transparent; color: #fff; }
-    .run-btn { height: 40px; padding: 0 24px; }
-    .output-area { flex: 1; border: 4px solid #333; background: #000; color: #eee; padding: 16px; font-family: 'JetBrains Mono', monospace; font-size: 14px; overflow-y: auto; }
-    .output-hdr { display: flex; gap: 24px; font-size: 11px; font-weight: 800; color: #666; margin-bottom: 12px; border-bottom: 1px solid #222; padding-bottom: 8px; }
+    .prompt { font-family: 'JetBrains Mono', monospace; color: var(--G); font-size: 13px; }
+    .console-input { flex: 1; border: none; outline: none; background: transparent; color: #fff; font-family: 'JetBrains Mono', monospace; }
+    .output-area { flex: 1; border: 4px solid #333; background: #000; color: #eee; padding: 16px; font-family: 'JetBrains Mono', monospace; overflow-y: auto; }
+    .output-hdr { display: flex; gap: 24px; font-size: 11px; color: #666; margin-bottom: 12px; border-bottom: 1px solid #222; padding-bottom: 8px; }
     .output-area pre { margin: 0; white-space: pre-wrap; line-height: 1.5; }
-    .output-area .error-out { color: var(--R); }
-    .output-area .placeholder { color: #444; font-weight: 700; display: flex; flex-direction: column; justify-content: center; align-items: center; height: 100%; gap: 8px; }
+    .error-out { color: var(--R); }
 
-    /* ── Right Panel ── */
     .nb-right-panel { width: 360px; border-left: 4px solid var(--K); background: var(--W); display: flex; flex-direction: column; flex-shrink: 0; }
-    .rp-header { padding: 24px; border-bottom: 4px solid var(--K); background: var(--B); color: #fff; display: flex; align-items: center; justify-content: space-between; }
+    .rp-header { padding: 24px; border-bottom: 4px solid var(--K); color: #fff; display: flex; align-items: center; justify-content: space-between; }
+    .bg-B { background: var(--B); }
+    .bg-Y { background: var(--Y); color: var(--K); }
     .rp-header .label { font-weight: 900; font-size: 16px; letter-spacing: 2px; }
-    .close-btn { background: none; border: none; color: #fff; font-size: 24px; cursor: pointer; font-weight: 900; }
+    .close-btn { background: none; border: none; font-size: 24px; cursor: pointer; color: inherit; }
 
     .rp-content { flex: 1; overflow-y: auto; padding: 20px; background: var(--O); }
     .nb-comment-card, .nb-version-card { border: 4px solid var(--K); background: var(--W); padding: 20px; margin-bottom: 16px; box-shadow: 6px 6px 0 var(--K); }
-    .c-meta, .v-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
+    .c-meta { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
     .c-user { font-weight: 900; font-size: 12px; color: var(--B); }
-    .c-line { font-size: 11px; font-weight: 900; color: #888; background: var(--O); padding: 2px 6px; }
+    .c-line { font-size: 11px; font-weight: 900; background: var(--O); padding: 2px 6px; }
     .c-resolve { font-size: 10px; font-weight: 900; border: 2px solid var(--K); padding: 2px 8px; cursor: pointer; background: var(--Y); }
-    .c-text { font-size: 14px; color: #1a1a1a; line-height: 1.5; font-weight: 500; }
+    .c-text { font-size: 14px; color: #1a1a1a; line-height: 1.5; }
     .c-text.resolved { text-decoration: line-through; opacity: 0.4; }
 
-    .nb-textarea-sm { width: 100%; border: 4px solid var(--K); padding: 12px; font-family: inherit; font-size: 14px; font-weight: 600; box-sizing: border-box; resize: vertical; }
-
-    .nb-btn-sm { border: 3px solid var(--K); padding: 8px 16px; font-weight: 800; font-size: 12px; cursor: pointer; box-shadow: 4px 4px 0 var(--K); text-transform: uppercase; transition: all .1s; }
-    .nb-btn-sm:hover { transform: translate(-1px, -1px); box-shadow: 5px 5px 0 var(--K); }
+    .nb-textarea-sm { width: 100%; border: 4px solid var(--K); padding: 12px; font-family: inherit; resize: vertical; outline: none; }
+    .nb-btn-sm { border: 3px solid var(--K); padding: 8px 16px; font-weight: 800; cursor: pointer; box-shadow: 4px 4px 0 var(--K); text-transform: uppercase; }
     .btn-blue { background: var(--B); color: #fff; }
     .btn-green { background: var(--G); color: #fff; }
     .btn-yellow { background: var(--Y); color: var(--K); }
     .btn-white { background: var(--W); color: var(--K); }
     .w-full { width: 100%; }
     .mt-8 { margin-top: 8px; }
+    .empty-hint { text-align: center; color: #888; font-style: italic; margin-top: 40px; }
 
-    /* ── Utils ── */
+    .nb-modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.4); backdrop-filter: blur(4px); z-index: 9999; display: flex; align-items: center; justify-content: center; }
+    .nb-modal { background: var(--W); border: 4px solid var(--K); box-shadow: 12px 12px 0 var(--K); width: 400px; padding: 24px; }
+    .modal-hdr { font-weight: 900; font-size: 18px; margin-bottom: 20px; }
+    .nb-input { border: 3px solid var(--K); padding: 12px; width: 100%; outline: none; box-shadow: 3px 3px 0 var(--K); }
+    .modal-actions { display: flex; justify-content: flex-end; gap: 12px; }
+
     .flex { display: flex; }
     .items-center { align-items: center; }
     .gap-12 { gap: 12px; }
-
-    /* ── Cursors ── */
-    .remote-cursor { position: absolute; pointer-events: none; }
-    .cursor-bar { width: 3px; height: 24px; background: var(--Y); }
-    .cursor-label { position: absolute; top: -20px; left: 0; background: var(--Y); color: var(--K); font-size: 11px; font-weight: 900; padding: 2px 8px; white-space: nowrap; border: 2px solid var(--K); box-shadow: 2px 2px 0 var(--K); }
-    /* ── Modals ── */
-    .nb-modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.4); backdrop-filter: blur(4px); z-index: 9999; display: flex; align-items: center; justify-content: center; }
-    .nb-modal { background: var(--W); border: 4px solid var(--K); box-shadow: 12px 12px 0 var(--K); width: 100%; max-width: 400px; overflow: hidden; animation: modalPop 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
-    @keyframes modalPop { from { transform: scale(0.8); opacity: 0; } to { transform: scale(1); opacity: 1; } }
-    .modal-hdr { background: var(--K); color: var(--W); padding: 12px 20px; font-weight: 900; letter-spacing: 2px; font-size: 14px; }
-    .modal-body { padding: 24px; }
-    .nb-input { border: 3px solid var(--K); padding: 12px; font-family: inherit; font-weight: 700; outline: none; box-shadow: 4px 4px 0 var(--K); }
-    .modal-actions { display: flex; justify-content: flex-end; gap: 12px; }
     .mt-16 { margin-top: 16px; }
   `]
 })
@@ -290,6 +280,7 @@ export class EditorComponent implements OnInit, OnDestroy, AfterViewInit {
   @ViewChild('tabs') tabsRef!: ElementRef;
 
   private route = inject(ActivatedRoute);
+  private router = inject(Router);
   private fileSvc = inject(FileService);
   private collabSvc = inject(CollabService);
   private execSvc = inject(ExecutionService);
@@ -297,21 +288,23 @@ export class EditorComponent implements OnInit, OnDestroy, AfterViewInit {
   private commentSvc = inject(CommentService);
   private authSvc = inject(AuthService);
   private toast = inject(ToastService);
+  private ngZone = inject(NgZone);
 
   projectId!: number;
-  projectName = 'Project';
+  projectName = 'Loading...';
   files: CodeFile[] = [];
   activeFile: CodeFile | null = null;
   editorContent = '';
   unsaved = false;
   running = false;
-  execPanelOpen = true;
+  execPanelOpen = false;
+  loading = true;
   stdin = '';
   currentJob: ExecutionJob | null = null;
   rightPanelMode: 'comments' | 'versions' | null = null;
   showNewFileDialog = false;
-  comments: any[] = [];
-  snapshots: any[] = [];
+  comments: Comment[] = [];
+  snapshots: Snapshot[] = [];
   newComment = '';
   newFileName = '';
   remoteCursors = new Map<string, CursorPosition>();
@@ -321,35 +314,56 @@ export class EditorComponent implements OnInit, OnDestroy, AfterViewInit {
   public sessionId: string | null = null;
 
   ngOnInit(): void {
-    this.projectId = Number(this.route.snapshot.paramMap.get('projectId'));
+    const rawId = this.route.snapshot.paramMap.get('projectId');
+    this.projectId = Number(rawId);
+    if (isNaN(this.projectId)) {
+      this.toast.error('Invalid Project ID');
+      this.router.navigate(['/projects']);
+      return;
+    }
     this.loadFiles();
+    // In a real app, fetch project name here
+    this.projectName = `Project #${this.projectId}`;
   }
 
   loadFiles(): void {
-    this.fileSvc.getTree(this.projectId).subscribe(files => {
-      this.files = files.filter(f => !f.deleted && f.fileType === 'FILE');
-      if (this.files.length && !this.activeFile) this.openFile(this.files[0]);
+    this.loading = true;
+    this.fileSvc.getTree(this.projectId).subscribe({
+      next: files => {
+        this.files = files.filter(f => !f.deleted && f.fileType === 'FILE');
+        if (this.files.length && !this.activeFile) this.openFile(this.files[0]);
+        this.loading = false;
+      },
+      error: () => {
+        this.loading = false;
+        this.toast.error('Failed to load files');
+      }
     });
   }
 
   ngAfterViewInit(): void {
-    if (this.sidebarRef?.nativeElement) {
-      gsap.fromTo(this.sidebarRef.nativeElement,
-        { x: -20, opacity: 0 }, { x: 0, opacity: 1, duration: 0.4, ease: 'power2.out' });
-    }
-    if (this.tabsRef?.nativeElement) {
-      gsap.fromTo(this.tabsRef.nativeElement,
-        { y: -10, opacity: 0 }, { y: 0, opacity: 1, duration: 0.3, ease: 'power2.out', delay: 0.2 });
-    }
+    setTimeout(() => {
+      if (this.sidebarRef?.nativeElement) {
+        gsap.fromTo(this.sidebarRef.nativeElement, { x: -20, opacity: 0 }, { x: 0, opacity: 1, duration: 0.4 });
+      }
+    }, 100);
   }
 
   openFile(file: CodeFile): void {
     this.activeFile = file;
-    this.fileSvc.getContent(file.fileId).subscribe(r => {
-      this.editorContent = r.content;
-      this.unsaved = false;
+    this.fileSvc.getContent(file.fileId).subscribe({
+      next: r => {
+        this.editorContent = r.content;
+        this.unsaved = false;
+      },
+      error: (err) => {
+        console.error('Content load error', err);
+        this.toast.error('Could not load file content');
+      }
     });
-    this.commentSvc.getByFile(file.fileId).subscribe(c => this.comments = c);
+    // Load side data
+    if (this.rightPanelMode === 'comments') this.loadComments();
+    if (this.rightPanelMode === 'versions') this.loadHistory();
   }
 
   createFile(): void {
@@ -361,35 +375,34 @@ export class EditorComponent implements OnInit, OnDestroy, AfterViewInit {
       language: this.detectLanguage(this.newFileName),
       content: ''
     }).subscribe({
-      next: () => {
+      next: (f) => {
         this.toast.success('File created!');
         this.showNewFileDialog = false;
         this.newFileName = '';
         this.loadFiles();
+        this.openFile(f);
       },
-      error: () => this.toast.error('Failed to create file')
+      error: (err) => {
+        console.error('File create error', err);
+        this.toast.error(err.status === 400 ? 'File already exists or invalid name' : 'Failed to create file');
+      }
     });
   }
 
   private detectLanguage(name: string): string {
     const ext = name.split('.').pop()?.toLowerCase();
-    if (ext === 'js') return 'JavaScript';
-    if (ext === 'ts') return 'TypeScript';
-    if (ext === 'py') return 'Python';
-    if (ext === 'go') return 'Go';
-    if (ext === 'java') return 'Java';
-    return 'Text';
+    const map: Record<string,string> = { js:'JavaScript', ts:'TypeScript', py:'Python', go:'Go', java:'Java', cpp:'C++', rb:'Ruby', rs:'Rust' };
+    return map[ext!] || 'Text';
   }
 
   onContentChange(): void {
     this.unsaved = true;
-    // Debounced collab broadcast
-    clearTimeout(this.changeTimer);
-    this.changeTimer = setTimeout(() => {
-      if (this.sessionId) {
-        this.collabSvc.sendEditDelta(this.sessionId, { content: this.editorContent });
-      }
-    }, 200);
+    if (this.sessionId) {
+      clearTimeout(this.changeTimer);
+      this.changeTimer = setTimeout(() => {
+        this.collabSvc.sendEditDelta(this.sessionId!, { content: this.editorContent });
+      }, 300);
+    }
   }
 
   onKeydown(e: KeyboardEvent): void {
@@ -398,9 +411,12 @@ export class EditorComponent implements OnInit, OnDestroy, AfterViewInit {
 
   save(): void {
     if (!this.activeFile) return;
-    this.fileSvc.updateContent(this.activeFile.fileId, this.editorContent).subscribe(() => {
-      this.unsaved = false;
-      this.toast.success('Saved!');
+    this.fileSvc.updateContent(this.activeFile.fileId, this.editorContent).subscribe({
+      next: () => {
+        this.unsaved = false;
+        this.toast.success('File saved!');
+      },
+      error: () => this.toast.error('Failed to save changes')
     });
   }
 
@@ -408,6 +424,7 @@ export class EditorComponent implements OnInit, OnDestroy, AfterViewInit {
     if (!this.activeFile) return;
     this.running = true;
     this.execPanelOpen = true;
+    this.currentJob = null;
 
     this.execSvc.submit({
       projectId: this.projectId,
@@ -420,16 +437,19 @@ export class EditorComponent implements OnInit, OnDestroy, AfterViewInit {
         this.currentJob = job;
         this.pollJobStatus(job.jobId);
       },
-      error: () => { this.running = false; this.toast.error('Execution failed to start.'); }
+      error: () => {
+        this.running = false;
+        this.toast.error('Execution failed to start');
+      }
     });
   }
 
   private pollJobStatus(jobId: string): void {
-    const interval = setInterval(() => {
+    const itv = setInterval(() => {
       this.execSvc.getJob(jobId).subscribe(job => {
         this.currentJob = job;
-        if (job.status === 'COMPLETED' || job.status === 'FAILED' || job.status === 'CANCELLED') {
-          clearInterval(interval);
+        if (['COMPLETED','FAILED','CANCELLED'].includes(job.status)) {
+          clearInterval(itv);
           this.running = false;
         }
       });
@@ -438,66 +458,29 @@ export class EditorComponent implements OnInit, OnDestroy, AfterViewInit {
 
   getOutput(): string {
     if (!this.currentJob) return '';
-    return this.currentJob.stdout || this.currentJob.stderr || '(no output)';
+    return (this.currentJob.stdout || '') + (this.currentJob.stderr || '');
   }
 
-  toggleCollab(): void {
-    if (this.sessionId) {
-      this.collabSvc.sendLeave(this.sessionId);
-      this.collabSvc.disconnectFromSession();
-      this.sessionId = null;
-      this.toast.info('Left collab session');
-      return;
-    }
+  toggleComments(): void {
+    if (this.rightPanelMode === 'comments') { this.rightPanelMode = null; return; }
+    this.rightPanelMode = 'comments';
+    this.loadComments();
+  }
+
+  loadComments(): void {
     if (!this.activeFile) return;
-    this.collabSvc.createSession({
-      projectId: this.projectId,
-      fileId: this.activeFile.fileId,
-      language: this.activeFile.language,
-      maxParticipants: 10,
-      passwordProtected: false
-    }).subscribe(({ sessionId }) => {
-      this.sessionId = sessionId;
-      this.collabSvc.connectToSession(sessionId);
-      this.subs.push(
-        this.collabSvc.editDelta$.subscribe(delta => {
-          // Apply remote delta (in real impl, use Monaco model applyEdit)
-          console.log('Remote delta', delta);
-        }),
-        this.collabSvc.cursorPos$.subscribe(pos => {
-          this.remoteCursors.set(`${pos.userId}`, pos);
-        })
-      );
-      this.toast.success(`Collab session started: ${sessionId}`);
-    });
+    this.commentSvc.getByFile(this.activeFile.fileId).subscribe(c => this.comments = c);
   }
 
   toggleVersions(): void {
     if (this.rightPanelMode === 'versions') { this.rightPanelMode = null; return; }
     this.rightPanelMode = 'versions';
-    if (this.activeFile) {
-      this.versionSvc.getHistory(this.activeFile.fileId).subscribe(s => this.snapshots = s);
-    }
+    this.loadHistory();
   }
 
-  createSnapshot(): void {
+  loadHistory(): void {
     if (!this.activeFile) return;
-    const message = prompt('Snapshot message:') || 'Quick save';
-    this.versionSvc.createSnapshot({
-      projectId: this.projectId,
-      fileId: this.activeFile.fileId,
-      message,
-      content: this.editorContent,
-      branch: 'main'
-    }).subscribe(() => this.toast.success('Snapshot created!'));
-  }
-
-  restoreSnapshot(id: number): void {
-    this.versionSvc.restore(id).subscribe(snap => {
-      this.editorContent = snap.content;
-      this.unsaved = true;
-      this.toast.success('Snapshot restored!');
-    });
+    this.versionSvc.getHistory(this.activeFile.fileId).subscribe(s => this.snapshots = s);
   }
 
   addComment(): void {
@@ -507,9 +490,13 @@ export class EditorComponent implements OnInit, OnDestroy, AfterViewInit {
       fileId: this.activeFile.fileId,
       content: this.newComment,
       lineNumber: 1
-    }).subscribe(c => {
-      this.comments = [...this.comments, c];
-      this.newComment = '';
+    }).subscribe({
+      next: c => {
+        this.comments = [...this.comments, c];
+        this.newComment = '';
+        this.toast.success('Comment added');
+      },
+      error: () => this.toast.error('Failed to post comment')
     });
   }
 
@@ -519,24 +506,66 @@ export class EditorComponent implements OnInit, OnDestroy, AfterViewInit {
     });
   }
 
-  getFileIcon(lang: string): string {
-    const icons: Record<string, string> = {
-      java: '☕', python: '🐍', javascript: '🟨', typescript: '🔷',
-      go: '🐹', rust: '🦀', cpp: '⚙️', c: '⚙️', html: '🌐', css: '🎨'
-    };
-    return icons[lang?.toLowerCase()] || '📄';
+  createSnapshot(): void {
+    if (!this.activeFile) return;
+    const msg = prompt('Enter snapshot message:');
+    if (msg === null) return;
+    this.versionSvc.createSnapshot({
+      projectId: this.projectId,
+      fileId: this.activeFile.fileId,
+      message: msg || 'Manual Snapshot',
+      content: this.editorContent,
+      branch: 'main'
+    }).subscribe({
+      next: () => {
+        this.toast.success('Snapshot created!');
+        if (this.rightPanelMode === 'versions') this.loadHistory();
+      },
+      error: () => this.toast.error('Failed to save snapshot')
+    });
   }
 
-  getCursorTop(line: number): string { return `${line * 20}px`; }
-  getCursorLeft(col: number): string { return `${col * 8.4}px`; }
+  restoreSnapshot(id: number): void {
+    this.versionSvc.restore(id).subscribe(snap => {
+      this.editorContent = snap.content;
+      this.unsaved = true;
+      this.toast.success('Restored snapshot content');
+    });
+  }
+
+  toggleCollab(): void {
+    if (this.sessionId) {
+      this.collabSvc.sendLeave(this.sessionId);
+      this.collabSvc.disconnectFromSession();
+      this.sessionId = null;
+      return;
+    }
+    if (!this.activeFile) return;
+    this.collabSvc.createSession({
+      projectId: this.projectId,
+      fileId: this.activeFile.fileId,
+      language: this.activeFile.language,
+      maxParticipants: 5,
+      passwordProtected: false
+    }).subscribe(s => {
+      this.sessionId = s.sessionId;
+      this.collabSvc.connectToSession(s.sessionId);
+      this.toast.success('Collaboration active');
+    });
+  }
+
+  getFileIcon(lang: string): string {
+    const map: Record<string,string> = { java:'☕', python:'🐍', javascript:'🟨', typescript:'🔷', go:'🐹', rust:'🦀' };
+    return map[lang?.toLowerCase()] || '📄';
+  }
 
   getLangColor(lang: string): string {
-    const m: Record<string, string> = {
-      java: '#FFD600', python: '#1A6FFF', javascript: '#FFD600',
-      typescript: '#1A6FFF', cpp: '#FF2D2D', go: '#00C853'
-    };
-    return m[lang?.toLowerCase()] || '#DDD';
+    const map: Record<string,string> = { java:'#FFD600', python:'#1A6FFF', javascript:'#FFD600', typescript:'#1A6FFF', go:'#00C853' };
+    return map[lang?.toLowerCase()] || '#888';
   }
+
+  getCursorTop(line: number): string { return `${line * 24}px`; }
+  getCursorLeft(col: number): string { return `${col * 9.6}px`; }
 
   ngOnDestroy(): void {
     this.subs.forEach(s => s.unsubscribe());

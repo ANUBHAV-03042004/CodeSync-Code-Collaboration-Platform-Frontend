@@ -631,7 +631,7 @@ describe('EditorComponent', () => {
   });
 
   it('should calculate cursor top position', () => {
-    expect(component.getCursorTop(5)).toBe('100px');
+    expect(component.getCursorTop(5)).toBe('120px');
   });
 
   it('should toggle version history panel', () => {

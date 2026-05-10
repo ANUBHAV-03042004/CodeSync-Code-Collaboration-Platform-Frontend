@@ -34,10 +34,10 @@ import { Project, CodeFile } from '../../core/models';
         </div>
       </div>
 
-      <div class="tab-bar">
-        <button class="tab" [class.active]="tab==='mine'" (click)="setTab('mine')">MY STUFF ({{myProjects.length}})</button>
-        <button class="tab" [class.active]="tab==='member'" (click)="setTab('member')">SHARED ({{memberProjects.length}})</button>
-        <button class="tab" [class.active]="tab==='public'" (click)="setTab('public')">EXPLORE ({{publicProjects.length}})</button>
+      <div class="tabs">
+        <button (click)="setTab('public')" [class.active]="tab==='public'" class="tab-explore">EXPLORE</button>
+        <button (click)="setTab('member')" [class.active]="tab==='member'" class="tab-shared">SHARED</button>
+        <button (click)="setTab('mine')" [class.active]="tab==='mine'" class="tab-mine">MY PROJECTS</button>
       </div>
 
       <div class="projects-grid" #grid>
@@ -45,7 +45,7 @@ import { Project, CodeFile } from '../../core/models';
           <div class="pc-accent" [style.background]="getLangColor(p.language)"></div>
           <div class="pc-content">
             <div class="pc-top">
-              <span class="nb-badge small" [style.background]="getLangColor(p.language)">{{p.language}}</span>
+              <span class="nb-badge small" [style.background]="getLangColor(p.language)" [style.color]="isDark(getLangColor(p.language)) ? 'white' : 'black'">{{p.language}}</span>
               <span class="nb-badge small" [class.blue]="p.visibility==='PRIVATE'" [class.green]="p.visibility==='PUBLIC'">{{p.visibility}}</span>
             </div>
             <h3 class="pc-title">{{p.name}}</h3>
@@ -90,9 +90,12 @@ import { Project, CodeFile } from '../../core/models';
     .s-inp { border: none; outline: none; padding: 14px 0; font-family: 'Space Grotesk', sans-serif; font-weight: 800; font-size: 14px; width: 240px; text-transform: uppercase; }
     .s-ic { margin-right: 12px; font-size: 18px; }
 
-    .tab-bar { display: flex; gap: 8px; margin-bottom: 32px; border-bottom: 4px solid var(--K); }
-    .tab { border: 4px solid var(--K); border-bottom: none; padding: 12px 24px; font-weight: 800; cursor: pointer; background: var(--O); transform: translateY(4px); transition: all .1s; }
-    .tab.active { background: var(--Y); transform: translateY(0); box-shadow: 4px -4px 0 var(--K); }
+    .tabs { display: flex; gap: 8px; margin-bottom: 32px; border-bottom: 4px solid var(--K); }
+    .tabs button { border: 4px solid var(--K); border-bottom: none; padding: 12px 24px; font-weight: 800; cursor: pointer; background: var(--W); transform: translateY(4px); transition: all .1s; }
+    .tabs button.active { transform: translateY(0); box-shadow: 4px -4px 0 var(--K); }
+    .tabs button.tab-explore.active { background: #FF2D2D; color: white; }
+    .tabs button.tab-shared.active { background: #1A6FFF; color: white; }
+    .tabs button.tab-mine.active { background: #00D26A; color: black; }
 
     .projects-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(340px, 1fr)); gap: 32px; }
     .pc-card { border: 4px solid var(--K); background: var(--W); box-shadow: 8px 8px 0 var(--K); cursor: pointer; transition: all .15s; display: flex; flex-direction: column; overflow: hidden; }
@@ -107,7 +110,7 @@ import { Project, CodeFile } from '../../core/models';
     .stats { display: flex; gap: 16px; font-weight: 800; font-size: 14px; }
     .actions { display: flex; gap: 8px; }
 
-    .nb-badge { padding: 4px 12px; border: 3px solid var(--K); font-size: 10px; font-weight: 800; text-transform: uppercase; background: var(--W); box-shadow: 3px 3px 0 var(--K); }
+    .nb-badge { padding: 4px 12px; border: 3px solid var(--K); font-size: 10px; font-weight: 800; text-transform: uppercase; background: var(--W); box-shadow: 3px 3px 0 var(--K); color: var(--K); transition: all 0.2s; }
     .nb-badge.blue { background: var(--B); color: #fff; }
     .nb-badge.green { background: var(--G); color: #fff; }
     .small { font-size: 9px; padding: 2px 8px; }
@@ -169,9 +172,12 @@ export class ProjectListComponent implements OnInit, AfterViewInit {
       ? src.filter(p => p.name.toLowerCase().includes(this.searchQuery.toLowerCase()))
       : src;
     setTimeout(() => {
-      if (this.gridRef) {
-        gsap.fromTo(this.gridRef.nativeElement.querySelectorAll('.project-card'),
-          { opacity: 0, y: 20 }, { opacity: 1, y: 0, duration: 0.3, stagger: 0.05, ease: 'power2.out' });
+      if (this.gridRef?.nativeElement) {
+        const targets = this.gridRef.nativeElement.querySelectorAll('.pc-card');
+        if (targets.length) {
+          gsap.fromTo(targets,
+            { opacity: 0, y: 20 }, { opacity: 1, y: 0, duration: 0.3, stagger: 0.05, ease: 'power2.out' });
+        }
       }
     });
   }
@@ -220,13 +226,22 @@ export class ProjectListComponent implements OnInit, AfterViewInit {
     });
   }
 
+  isDark(color: string): boolean {
+    if (!color || color.startsWith('var')) return false;
+    const hex = color.replace('#', '').trim();
+    if (hex.length < 6) return false;
+    const r = parseInt(hex.substring(0, 2), 16);
+    const g = parseInt(hex.substring(2, 4), 16);
+    const b = parseInt(hex.substring(4, 6), 16);
+    return (r * 0.299 + g * 0.587 + b * 0.114) < 150;
+  }
+
   private LANG_COLORS: Record<string,string> = {
     TypeScript:'#1E88E5',Go:'#43A047',Python:'#43A047',Rust:'#FB8C00',
     CSS:'#E53935',C:'#0A0A0A',JavaScript:'#FDD835',Java:'#E53935',
     Swift:'#E53935',Kotlin:'#1E88E5',Ruby:'#E53935',PHP:'#1E88E5'
   };
   getLangColor(lang: string): string { return this.LANG_COLORS[lang] || '#0A0A0A'; }
-
 }
 
 // ── Project Create ────────────────────────────────────────────────────────────
@@ -365,7 +380,7 @@ export class ProjectCreateComponent implements AfterViewInit {
           <p class="desc">{{ project.description || 'No description provided for this project.' }}</p>
 
           <div class="badges">
-            <span class="nb-badge lang-badge" [style.background]="getLangColor(project.language)">{{ project.language }}</span>
+            <span class="nb-badge lang-badge" [style.background]="getLangColor(project.language)" [style.color]="isDark(getLangColor(project.language)) ? 'white' : 'black'">{{ project.language }}</span>
             <span class="nb-badge vis-badge" [class.blue]="project.visibility === 'PRIVATE'" [class.green]="project.visibility === 'PUBLIC'">
               {{ project.visibility }}
             </span>
@@ -423,7 +438,7 @@ export class ProjectCreateComponent implements AfterViewInit {
                   <span class="f-name">{{ f.name }}</span>
                   <span class="f-path">{{ f.path }}</span>
                 </div>
-                <span class="f-lang">{{ f.language }}</span>
+                <span class="f-lang" [style.background]="getLangColor(f.language)" [style.color]="isDark(getLangColor(f.language)) ? 'white' : 'black'">{{ f.language }}</span>
               </div>
               <div class="empty-files" *ngIf="!files.length">
                 <div class="empty-icon">📭</div>
@@ -574,12 +589,6 @@ export class ProjectCreateComponent implements AfterViewInit {
       .hero-actions { width: 100%; }
       h1.main-title { font-size: 56px; }
     }
-
-    @media (max-width: 900px) {
-      .content-row { grid-template-columns: 1fr; }
-      .stats-grid { grid-template-columns: 1fr 1fr; }
-      .hero-actions { width: 100%; }
-    }
   `]
 })
 export class ProjectDetailComponent implements OnInit, AfterViewInit {
@@ -611,7 +620,7 @@ export class ProjectDetailComponent implements OnInit, AfterViewInit {
 
   ngAfterViewInit(): void {
     setTimeout(() => {
-      if (this.heroRef) {
+      if (this.heroRef?.nativeElement) {
         gsap.fromTo(this.heroRef.nativeElement,
           { opacity: 0, y: 40 }, { opacity: 1, y: 0, duration: 0.7, ease: 'power4.out' });
       }
@@ -623,11 +632,11 @@ export class ProjectDetailComponent implements OnInit, AfterViewInit {
             { opacity: 1, scale: 1, duration: 0.5, stagger: 0.1, ease: 'back.out(1.7)', delay: 0.2 });
         }
       }
-      if (this.mainColRef) {
+      if (this.mainColRef?.nativeElement) {
         gsap.fromTo(this.mainColRef.nativeElement,
           { opacity: 0, x: -30 }, { opacity: 1, x: 0, duration: 0.6, ease: 'power3.out', delay: 0.4 });
       }
-      if (this.sideColRef) {
+      if (this.sideColRef?.nativeElement) {
         gsap.fromTo(this.sideColRef.nativeElement,
           { opacity: 0, x: 30 }, { opacity: 1, x: 0, duration: 0.6, ease: 'power3.out', delay: 0.4 });
       }
@@ -690,6 +699,16 @@ export class ProjectDetailComponent implements OnInit, AfterViewInit {
       go: '🐹', rust: '🦀', html: '🌐', css: '🎨', ruby: '💎', php: '🐘'
     };
     return m[lang?.toLowerCase()] || '📄';
+  }
+
+  isDark(color: string): boolean {
+    if (!color || color.startsWith('var')) return false;
+    const hex = color.replace('#', '').trim();
+    if (hex.length < 6) return false;
+    const r = parseInt(hex.substring(0, 2), 16);
+    const g = parseInt(hex.substring(2, 4), 16);
+    const b = parseInt(hex.substring(4, 6), 16);
+    return (r * 0.299 + g * 0.587 + b * 0.114) < 150;
   }
 
   getLangColor(lang: string): string {
