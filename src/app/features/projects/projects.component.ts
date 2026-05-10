@@ -194,7 +194,11 @@ export class ProjectListComponent implements OnInit, AfterViewInit {
     e.stopPropagation();
     const wasStarred = this.isStarred(p);
     this.projectSvc.star(p.projectId).subscribe(() => {
-      this.toast.success(wasStarred ? 'Removed from Stars!' : 'Project Starred!');
+      if (wasStarred) {
+        this.toast.error('Removed from Stars!');
+      } else {
+        this.toast.success('Project Starred!');
+      }
       const user = this.authSvc.getCurrentUser();
       if (user) this.projectSvc.getByOwner(user.userId).subscribe(projs => { this.myProjects = projs; this.updateDisplayed(); });
       this.projectSvc.getPublic().subscribe(projs => this.publicProjects = projs);
@@ -205,7 +209,11 @@ export class ProjectListComponent implements OnInit, AfterViewInit {
     e.stopPropagation();
     const wasForked = this.isForked(p);
     this.projectSvc.fork(p.projectId).subscribe(() => {
-      this.toast.success(wasForked ? 'Fork Deleted!' : 'Project Forked Successfully!');
+      if (wasForked) {
+        this.toast.error('Fork Deleted!');
+      } else {
+        this.toast.success('Project Forked Successfully!');
+      }
       const user = this.authSvc.getCurrentUser();
       if (user) this.projectSvc.getByOwner(user.userId).subscribe(projs => { this.myProjects = projs; this.updateDisplayed(); });
       this.projectSvc.getPublic().subscribe(projs => this.publicProjects = projs);
@@ -347,8 +355,6 @@ export class ProjectCreateComponent implements AfterViewInit {
   imports: [CommonModule, RouterLink],
   template: `
     <div class="page" *ngIf="project">
-      <!-- High-Visibility Marker -->
-      <div class="nb-dev-banner">NEO-BRUTALIST PROJECT DETAIL ACTIVE</div>
       <!-- Top Banner / Hero -->
       <div class="nb-hero" #hero>
         <div class="hero-content">
@@ -637,7 +643,11 @@ export class ProjectDetailComponent implements OnInit, AfterViewInit {
     if (!this.project) return;
     const wasStarred = this.isStarred;
     this.projectSvc.star(this.project.projectId).subscribe(() => {
-      this.toast.success(wasStarred ? 'Removed from Stars!' : 'Project Starred!');
+      if (wasStarred) {
+        this.toast.error('Removed from Stars!');
+      } else {
+        this.toast.success('Project Starred!');
+      }
       this.loadProject(this.project!.projectId);
     });
   }
@@ -647,7 +657,11 @@ export class ProjectDetailComponent implements OnInit, AfterViewInit {
     const wasForked = this.isForked;
     this.projectSvc.fork(this.project.projectId).subscribe({
       next: (res) => {
-        this.toast.success(wasForked ? 'Fork Deleted!' : 'Project Forked Successfully!');
+        if (wasForked) {
+          this.toast.error('Fork Deleted!');
+        } else {
+          this.toast.success('Project Forked Successfully!');
+        }
         this.loadProject(this.project!.projectId);
       },
       error: () => this.toast.error('Operation failed')

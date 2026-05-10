@@ -23,7 +23,7 @@ export const environment = {
   apiBase: 'http://localhost:8080',
 
   // WebSocket endpoints (STOMP over SockJS) — also via the Gateway
-  wsCollabEndpoint:        'http://localhost:8080/ws/collab/websocket',
-  wsNotificationEndpoint:  'http://localhost:8080/ws/notifications/websocket',
-  wsExecutionEndpoint:     'http://localhost:8080/ws/execution/websocket',
+  wsCollabEndpoint:        'http://localhost:8080/ws/collab',
+  wsNotificationEndpoint:  'http://localhost:8080/ws/notifications',
+  wsExecutionEndpoint:     'http://localhost:8080/ws/execution',
 };
