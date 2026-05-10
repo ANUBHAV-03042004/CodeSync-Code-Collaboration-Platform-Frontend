@@ -161,6 +161,19 @@ import { ToastService } from '../../shared/components/toast/toast.service';
           </div>
         </div>
       </aside>
+      <!-- New File Dialog -->
+      <div class="nb-modal-overlay" *ngIf="showNewFileDialog">
+        <div class="nb-modal">
+          <div class="modal-hdr">NEW FILE</div>
+          <div class="modal-body">
+            <input [(ngModel)]="newFileName" placeholder="filename.js" class="nb-input w-full" (keydown.enter)="createFile()" />
+            <div class="modal-actions mt-16">
+              <button class="nb-btn-sm btn-white" (click)="showNewFileDialog = false">CANCEL</button>
+              <button class="nb-btn-sm btn-yellow" (click)="createFile()">CREATE</button>
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
   `,
   styles: [`
@@ -260,6 +273,15 @@ import { ToastService } from '../../shared/components/toast/toast.service';
     .remote-cursor { position: absolute; pointer-events: none; }
     .cursor-bar { width: 3px; height: 24px; background: var(--Y); }
     .cursor-label { position: absolute; top: -20px; left: 0; background: var(--Y); color: var(--K); font-size: 11px; font-weight: 900; padding: 2px 8px; white-space: nowrap; border: 2px solid var(--K); box-shadow: 2px 2px 0 var(--K); }
+    /* ── Modals ── */
+    .nb-modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.4); backdrop-filter: blur(4px); z-index: 9999; display: flex; align-items: center; justify-content: center; }
+    .nb-modal { background: var(--W); border: 4px solid var(--K); box-shadow: 12px 12px 0 var(--K); width: 100%; max-width: 400px; overflow: hidden; animation: modalPop 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
+    @keyframes modalPop { from { transform: scale(0.8); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+    .modal-hdr { background: var(--K); color: var(--W); padding: 12px 20px; font-weight: 900; letter-spacing: 2px; font-size: 14px; }
+    .modal-body { padding: 24px; }
+    .nb-input { border: 3px solid var(--K); padding: 12px; font-family: inherit; font-weight: 700; outline: none; box-shadow: 4px 4px 0 var(--K); }
+    .modal-actions { display: flex; justify-content: flex-end; gap: 12px; }
+    .mt-16 { margin-top: 16px; }
   `]
 })
 export class EditorComponent implements OnInit, OnDestroy, AfterViewInit {
@@ -291,6 +313,7 @@ export class EditorComponent implements OnInit, OnDestroy, AfterViewInit {
   comments: any[] = [];
   snapshots: any[] = [];
   newComment = '';
+  newFileName = '';
   remoteCursors = new Map<string, CursorPosition>();
 
   private subs: Subscription[] = [];
@@ -299,9 +322,13 @@ export class EditorComponent implements OnInit, OnDestroy, AfterViewInit {
 
   ngOnInit(): void {
     this.projectId = Number(this.route.snapshot.paramMap.get('projectId'));
+    this.loadFiles();
+  }
+
+  loadFiles(): void {
     this.fileSvc.getTree(this.projectId).subscribe(files => {
       this.files = files.filter(f => !f.deleted && f.fileType === 'FILE');
-      if (this.files.length) this.openFile(this.files[0]);
+      if (this.files.length && !this.activeFile) this.openFile(this.files[0]);
     });
   }
 
@@ -323,6 +350,35 @@ export class EditorComponent implements OnInit, OnDestroy, AfterViewInit {
       this.unsaved = false;
     });
     this.commentSvc.getByFile(file.fileId).subscribe(c => this.comments = c);
+  }
+
+  createFile(): void {
+    if (!this.newFileName.trim()) return;
+    this.fileSvc.createFile({
+      projectId: this.projectId,
+      name: this.newFileName,
+      path: this.newFileName,
+      language: this.detectLanguage(this.newFileName),
+      content: ''
+    }).subscribe({
+      next: () => {
+        this.toast.success('File created!');
+        this.showNewFileDialog = false;
+        this.newFileName = '';
+        this.loadFiles();
+      },
+      error: () => this.toast.error('Failed to create file')
+    });
+  }
+
+  private detectLanguage(name: string): string {
+    const ext = name.split('.').pop()?.toLowerCase();
+    if (ext === 'js') return 'JavaScript';
+    if (ext === 'ts') return 'TypeScript';
+    if (ext === 'py') return 'Python';
+    if (ext === 'go') return 'Go';
+    if (ext === 'java') return 'Java';
+    return 'Text';
   }
 
   onContentChange(): void {
