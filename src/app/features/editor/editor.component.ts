@@ -17,8 +17,6 @@ import { ToastService } from '../../shared/components/toast/toast.service';
   imports: [CommonModule, FormsModule],
   template: `
     <div class="editor-shell" #shell>
-      <!-- High-Visibility Marker -->
-      <div class="nb-editor-marker">NEO-BRUTALIST EDITOR ACTIVE</div>
       <!-- Sidebar: File Tree -->
       <aside class="nb-sidebar" #sidebar>
         <div class="brand-box">

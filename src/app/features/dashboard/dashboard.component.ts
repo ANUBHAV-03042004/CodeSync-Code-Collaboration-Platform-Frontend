@@ -222,6 +222,7 @@ export class DashboardComponent implements OnInit, AfterViewInit {
   private authSvc = inject(AuthService);
   private execSvc = inject(ExecutionService);
   private router = inject(Router);
+  private toast = inject(ToastService);
 
   user: User | null = null;
   myProjects: Project[] = [];
@@ -278,14 +279,15 @@ export class DashboardComponent implements OnInit, AfterViewInit {
     const wasForked = this.isForked(p);
     this.projectSvc.fork(p.projectId).subscribe({
       next: () => {
-        const msg = wasForked ? 'Fork Deleted!' : 'Project Forked Successfully!';
-        const toast = inject(ToastService);
-        toast.success(msg);
+        if (wasForked) {
+          this.toast.error('Fork Deleted!');
+        } else {
+          this.toast.success('Project Forked Successfully!');
+        }
         this.ngOnInit(); // Refresh
       },
       error: () => {
-        const toast = inject(ToastService);
-        toast.error('Fork operation failed');
+        this.toast.error('Fork operation failed');
       }
     });
   }
