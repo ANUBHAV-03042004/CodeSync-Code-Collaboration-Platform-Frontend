@@ -48,37 +48,13 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Write environment.prod.ts
-        env:
-          API_BASE: ${{ secrets.ANGULAR_API_BASE }}
-          WS_COLLAB: ${{ secrets.ANGULAR_WS_COLLAB }}
-          WS_NOTIF: ${{ secrets.ANGULAR_WS_NOTIF }}
-          WS_EXEC: ${{ secrets.ANGULAR_WS_EXEC }}
-        run: |
-          python3 - << 'PYEOF'
-          import os
-          api_base  = os.environ['API_BASE']
-          ws_collab = os.environ['WS_COLLAB']
-          ws_notif  = os.environ['WS_NOTIF']
-          ws_exec   = os.environ['WS_EXEC']
-          content = f"""export const environment = {{
-            production: true,
-            apiBase:                '{api_base}',
-            wsCollabEndpoint:       '{ws_collab}',
-            wsNotificationEndpoint: '{ws_notif}',
-            wsExecutionEndpoint:    '{ws_exec}'
-          }};
-          """
-          with open('src/environments/environment.prod.ts', 'w') as f:
-              f.write(content)
-          print(f"apiBase length: {len(api_base)} chars")
-          print(f"wsCollabEndpoint length: {len(ws_collab)} chars")
-          print(f"wsNotifEndpoint length: {len(ws_notif)} chars")
-          print(f"wsExecEndpoint length: {len(ws_exec)} chars")
-          PYEOF
-
       - name: Build Angular (production)
         run: npm run build -- --configuration=production
+        env:
+          ANGULAR_API_BASE: ${{ secrets.ANGULAR_API_BASE }}
+          ANGULAR_WS_COLLAB: ${{ secrets.ANGULAR_WS_COLLAB }}
+          ANGULAR_WS_NOTIF: ${{ secrets.ANGULAR_WS_NOTIF }}
+          ANGULAR_WS_EXEC: ${{ secrets.ANGULAR_WS_EXEC }}
 
       - name: Deploy to Netlify
         run: |
