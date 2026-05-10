@@ -91,7 +91,7 @@ const LANG_COLORS: Record<string,string> = {
           <div class="pc-top-bar" [style.background]="getLangColor(p.language)"></div>
           <div class="pc-body">
             <div class="pc-badges">
-              <span class="badge badge-B">{{ p.language }}</span>
+              <span class="badge badge-B" [style.background]="getLangColor(p.language)" [style.color]="isDark(getLangColor(p.language)) ? 'white' : 'black'">{{ p.language }}</span>
               <span class="badge" [class]="p.visibility==='PUBLIC' ? 'badge-G' : 'badge-Y'">{{ p.visibility }}</span>
             </div>
             <div class="pc-name">{{ p.name }}</div>
@@ -120,9 +120,9 @@ const LANG_COLORS: Record<string,string> = {
             <div class="pc-top-bar" [style.background]="getLangColor(p.language)"></div>
             <div class="pc-body">
               <div class="pc-badges">
-                <span class="badge badge-B">{{ p.language }}</span>
-                <span class="badge badge-G">PUBLIC</span>
-              </div>
+              <span class="badge badge-B" [style.background]="getLangColor(p.language)" [style.color]="isDark(getLangColor(p.language)) ? 'white' : 'black'">{{ p.language }}</span>
+              <span class="badge" [class]="p.visibility==='PUBLIC' ? 'badge-G' : 'badge-Y'">{{ p.visibility }}</span>
+            </div>
               <div class="pc-name">{{ p.name }}</div>
               <div class="pc-desc">{{ p.description || 'No description' }}</div>
               <div class="pc-foot">
@@ -294,6 +294,16 @@ export class DashboardComponent implements OnInit, AfterViewInit {
         this.toast.error('Fork operation failed');
       }
     });
+  }
+
+  isDark(color: string): boolean {
+    if (!color || color.startsWith('var')) return false;
+    const hex = color.replace('#', '').trim();
+    if (hex.length < 6) return false;
+    const r = parseInt(hex.substring(0, 2), 16);
+    const g = parseInt(hex.substring(2, 4), 16);
+    const b = parseInt(hex.substring(4, 6), 16);
+    return (r * 0.299 + g * 0.587 + b * 0.114) < 150;
   }
 
   getLangColor(lang: string): string { return LANG_COLORS[lang] || 'var(--K)'; }
