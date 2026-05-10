@@ -4,7 +4,8 @@
   "scripts": {
     "ng": "ng",
     "start": "ng serve",
-    "build": "ng build && node env-replace.js",
+    "build": "ng build",
+    "postbuild": "node env-replace.js",
     "test": "jest --coverage",
     "test:watch": "jest --watch",
     "lint": "ng lint"
