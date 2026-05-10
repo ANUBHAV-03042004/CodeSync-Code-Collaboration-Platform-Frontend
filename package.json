@@ -4,8 +4,8 @@
   "scripts": {
     "ng": "ng",
     "start": "ng serve",
+    "prebuild": "node write-env.js",
     "build": "ng build",
-    "postbuild": "node env-replace.js",
     "test": "jest --coverage",
     "test:watch": "jest --watch",
     "lint": "ng lint"
