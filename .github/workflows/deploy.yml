@@ -66,3 +66,7 @@ jobs:
         env:
           NETLIFY_AUTH_TOKEN: ${{ secrets.NETLIFY_AUTH_TOKEN }}
           NETLIFY_SITE_ID: ${{ secrets.NETLIFY_SITE_ID }}
+          ANGULAR_API_BASE: ${{ secrets.ANGULAR_API_BASE }}
+          ANGULAR_WS_COLLAB: ${{ secrets.ANGULAR_WS_COLLAB }}
+          ANGULAR_WS_NOTIF: ${{ secrets.ANGULAR_WS_NOTIF }}
+          ANGULAR_WS_EXEC: ${{ secrets.ANGULAR_WS_EXEC }}
