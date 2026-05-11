@@ -6,9 +6,10 @@ import { gsap } from 'gsap';
 import { Subscription } from 'rxjs';
 import { FileService } from '../../services/file.service';
 import { CollabService } from '../../services/collab.service';
+import { ProjectService } from '../../services/project.service';
 import { ExecutionService, VersionService, CommentService } from '../../services/other-services';
 import { AuthService } from '../../services/auth.service';
-import { CodeFile, ExecutionJob, CursorPosition, Snapshot, Comment } from '../../core/models';
+import { CodeFile, ExecutionJob, CursorPosition, Snapshot, Comment, User } from '../../core/models';
 import { ToastService } from '../../shared/components/toast/toast.service';
 
 interface FileNode {
@@ -357,6 +358,7 @@ export class EditorComponent implements OnInit, OnDestroy, AfterViewInit {
   private router = inject(Router);
   private fileSvc = inject(FileService);
   private collabSvc = inject(CollabService);
+  private projectSvc = inject(ProjectService);
   private execSvc = inject(ExecutionService);
   private versionSvc = inject(VersionService);
   private commentSvc = inject(CommentService);
@@ -409,9 +411,34 @@ export class EditorComponent implements OnInit, OnDestroy, AfterViewInit {
     // Check for session in query params to auto-join collab
     const sess = this.route.snapshot.queryParamMap.get('session');
     if (sess) {
-      this.sessionId = sess;
-      this.collabSvc.connectToSession(sess);
-      this.toast.success('Joined collaboration session!');
+      // First check if the session is still active (link might be expired)
+      this.collabSvc.isActive(sess).subscribe({
+        next: (res) => {
+          if (res.active) {
+            // Call REST API to register the join on the backend
+            // This triggers PARTICIPANT_JOINED event -> RabbitMQ -> ProjectService adds member
+            this.collabSvc.joinSession(sess).subscribe({
+              next: () => {
+                this.sessionId = sess;
+                this.collabSvc.connectToSession(sess);
+                this.toast.success('Joined collaboration session!');
+              },
+              error: (err) => {
+                console.error('Failed to join session', err);
+                this.toast.error('Failed to join session. It may have ended.');
+                // Remove invalid session param from URL
+                this.router.navigate([], { queryParams: { session: null }, queryParamsHandling: 'merge' });
+              }
+            });
+          } else {
+            this.toast.error('This collaboration link has expired.');
+            this.router.navigate([], { queryParams: { session: null }, queryParamsHandling: 'merge' });
+          }
+        },
+        error: () => {
+          this.toast.error('Could not verify collaboration session.');
+        }
+      });
     }
     this.projectName = `Project #${this.projectId}`;
     this.setupCollabListeners();
