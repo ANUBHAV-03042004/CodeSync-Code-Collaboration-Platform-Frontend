@@ -1,4 +1,4 @@
-import { Injectable, OnDestroy } from '@angular/core';
+import { Injectable, OnDestroy, inject, NgZone } from '@angular/core';
 import { Client, IMessage, IStompSocket, StompSubscription } from '@stomp/stompjs';
 import SockJS from 'sockjs-client';
 import { Subject } from 'rxjs';
@@ -12,6 +12,7 @@ export interface StompMessage {
 export class WebSocketService implements OnDestroy {
   private clients = new Map<string, Client>();
   private connected$ = new Map<string, Subject<boolean>>();
+  private ngZone = inject(NgZone);
 
   connect(name: string, endpoint: string): Subject<boolean> {
     if (this.clients.has(name)) {
@@ -51,7 +52,9 @@ export class WebSocketService implements OnDestroy {
   subscribe(name: string, destination: string, callback: (msg: IMessage) => void): StompSubscription | null {
     const client = this.clients.get(name);
     if (!client?.connected) return null;
-    return client.subscribe(destination, callback);
+    return client.subscribe(destination, (msg) => {
+      this.ngZone.run(() => callback(msg));
+    });
   }
 
   publish(name: string, destination: string, body: any): void {

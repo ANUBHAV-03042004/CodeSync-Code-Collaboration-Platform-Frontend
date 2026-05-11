@@ -1,6 +1,6 @@
 import { Injectable, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
-import { Observable, Subject } from 'rxjs';
+import { Observable, Subject, map } from 'rxjs';
 import { WebSocketService } from './websocket.service';
 import { environment } from '../../environments/environment';
 import {
@@ -171,12 +171,24 @@ export class NotificationService {
   notification$ = new Subject<Notification>();
   unreadCount$ = new Subject<number>();
 
+  private mapNotif(raw: any): Notification {
+    return {
+      ...raw,
+      id: raw.id || raw.notificationId,
+      read: raw.read !== undefined ? raw.read : raw.isRead
+    };
+  }
+
   getAll(): Observable<Notification[]> {
-    return this.http.get<Notification[]>(this.base);
+    return this.http.get<any[]>(this.base).pipe(
+      map(list => list.map(n => this.mapNotif(n)))
+    );
   }
 
   getUnread(): Observable<Notification[]> {
-    return this.http.get<Notification[]>(`${this.base}/unread`);
+    return this.http.get<any[]>(`${this.base}/unread`).pipe(
+      map(list => list.map(n => this.mapNotif(n)))
+    );
   }
 
   getBadgeCount(): Observable<{ unreadCount: number }> {
@@ -211,14 +223,13 @@ export class NotificationService {
     if (!localStorage.getItem('access_token')) return;
     this.ws.connect('notifications', environment.wsNotificationEndpoint);
     this.ws.subscribe('notifications', '/user/queue/notifications', msg => {
-      const raw = JSON.parse(msg.body);
-      const notif: Notification = {
-        ...raw,
-        id: raw.id || raw.notificationId,
-        read: raw.read !== undefined ? raw.read : raw.isRead
-      };
+      const notif = this.mapNotif(JSON.parse(msg.body));
       this.notification$.next(notif);
       this.getBadgeCount().subscribe(r => this.unreadCount$.next(r.unreadCount));
+    });
+    this.ws.subscribe('notifications', '/user/queue/badge', msg => {
+      const body = JSON.parse(msg.body);
+      this.unreadCount$.next(body.unreadCount);
     });
   }
 
