@@ -443,6 +443,8 @@ export class EditorComponent implements OnInit, OnDestroy, AfterViewInit {
     this.subs.push(this.collabSvc.sessionEvent$.subscribe(event => {
       if (event.type === 'PARTICIPANT_JOINED') {
         this.toast.info(`User ${event.userId} joined the session`);
+        // Refresh collaborator list in right panel if open
+        if (this.rightPanelMode === 'members') this.loadMembers();
       } else if (event.type === 'PARTICIPANT_LEFT') {
         this.toast.info(`User ${event.userId} left the session`);
         this.remoteCursors.delete(event.userId.toString());
@@ -826,9 +828,25 @@ export class EditorComponent implements OnInit, OnDestroy, AfterViewInit {
 
   toggleCollab(): void {
     if (this.sessionId) {
-      this.collabSvc.sendLeave(this.sessionId);
-      this.collabSvc.disconnectFromSession();
-      this.sessionId = null;
+      // If we are in a session, we want to STOP it.
+      // If we are the owner (checked by backend), this will end it for everyone and delete Redis keys.
+      this.collabSvc.endSession(this.sessionId).subscribe({
+        next: () => {
+          this.toast.warn('Collaboration ended. Invite link is now invalid.');
+          this.sessionId = null;
+          this.collabSvc.disconnectFromSession();
+          // Remove session param from URL without reloading
+          this.router.navigate([], { queryParams: { session: null }, queryParamsHandling: 'merge' });
+        },
+        error: () => {
+          // If endSession fails (e.g. not owner), just leave
+          this.collabSvc.sendLeave(this.sessionId!);
+          this.collabSvc.disconnectFromSession();
+          this.sessionId = null;
+          this.toast.info('Left collaboration session.');
+          this.router.navigate([], { queryParams: { session: null }, queryParamsHandling: 'merge' });
+        }
+      });
       return;
     }
     if (!this.activeFile) return;
