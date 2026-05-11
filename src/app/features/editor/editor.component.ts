@@ -82,7 +82,7 @@ interface FileNode {
               <span class="unsaved-mark" *ngIf="unsaved">●</span>
             </div>
             <div class="last-edit-info" *ngIf="activeFile">
-              Changed by: <b>{{ lastEditorName }}</b> · {{ activeFile.updatedAt | date:'MMM d, HH:mm' }}
+              Changed by: <b>{{ lastEditorName }}</b> · {{ activeFile.updatedAt | date:'MMM d, HH:mm' : '+0530' }}
             </div>
           </div>
 
@@ -93,6 +93,7 @@ interface FileNode {
             <button class="nb-action-btn" (click)="createSnapshot()" [disabled]="!activeFile" title="Snapshot">📸</button>
             <button class="nb-action-btn" (click)="toggleVersions()" [class.active]="rightPanelMode === 'versions'" [disabled]="!activeFile" title="History">🕒</button>
             <button class="nb-action-btn" (click)="toggleComments()" [class.active]="rightPanelMode === 'comments'" [disabled]="!activeFile" title="Comments">💬</button>
+            <button class="nb-action-btn" (click)="toggleMembers()" [class.active]="rightPanelMode === 'members'" title="Collaborators">👥</button>
           </div>
         </div>
 
@@ -158,12 +159,23 @@ interface FileNode {
 
       <!-- Right Panel -->
       <aside class="nb-right-panel" *ngIf="rightPanelMode" #rightPanel>
-        <div class="rp-header" [class.bg-B]="rightPanelMode === 'comments'" [class.bg-Y]="rightPanelMode === 'versions'">
-          <span class="label">{{ rightPanelMode === 'comments' ? 'COMMENTS' : 'SNAPSHOTS' }}</span>
+        <div class="rp-header" [class.bg-B]="rightPanelMode === 'comments'" [class.bg-Y]="rightPanelMode === 'versions'" [class.bg-G]="rightPanelMode === 'members'">
+          <span class="label">{{ rightPanelMode === 'comments' ? 'COMMENTS' : (rightPanelMode === 'versions' ? 'SNAPSHOTS' : 'COLLABORATORS') }}</span>
           <button class="close-btn" (click)="rightPanelMode = null">✕</button>
         </div>
 
         <div class="rp-content">
+          <!-- Members Mode -->
+          <div class="member-scroller" *ngIf="rightPanelMode === 'members'">
+            <div class="nb-member-card" *ngFor="let m of memberProfiles">
+              <div class="m-avatar">{{ m.username[0].toUpperCase() }}</div>
+              <div class="m-info">
+                <div class="m-name">{{ m.username }}</div>
+                <div class="m-role">{{ m.userId === projectOwnerId ? 'OWNER' : 'COLLABORATOR' }}</div>
+              </div>
+            </div>
+            <div class="empty-hint" *ngIf="!memberProfiles.length">Loading members...</div>
+          </div>
           <!-- Comments Mode -->
           <div class="comment-scroller" *ngIf="rightPanelMode === 'comments'">
             <div class="nb-comment-card" *ngFor="let c of comments">
@@ -247,6 +259,13 @@ interface FileNode {
     .delete-file-btn:hover { transform: scale(1.2); }
 
     .tree-children { display: flex; flex-direction: column; }
+    
+    .member-scroller { padding: 12px; display: flex; flex-direction: column; gap: 12px; }
+    .nb-member-card { display: flex; align-items: center; gap: 12px; padding: 12px; background: var(--W); border: 3px solid var(--K); box-shadow: 4px 4px 0 var(--K); }
+    .m-avatar { width: 36px; height: 36px; background: var(--Y); border: 2px solid var(--K); display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 14px; }
+    .m-info { display: flex; flex-direction: column; }
+    .m-name { font-weight: 800; font-size: 14px; color: var(--K); }
+    .m-role { font-size: 10px; font-weight: 700; color: #666; text-transform: uppercase; letter-spacing: 0.5px; }
 
     .last-edit-info { margin-left: 20px; font-size: 11px; color: #666; font-family: inherit; display: flex; align-items: center; gap: 4px; }
     .last-edit-info b { color: var(--K); }
@@ -356,7 +375,7 @@ export class EditorComponent implements OnInit, OnDestroy, AfterViewInit {
   loading = true;
   stdin = '';
   currentJob: ExecutionJob | null = null;
-  rightPanelMode: 'comments' | 'versions' | null = null;
+  rightPanelMode: 'comments' | 'versions' | 'members' | null = null;
   showNewFileDialog = false;
   comments: Comment[] = [];
   snapshots: Snapshot[] = [];
@@ -370,6 +389,9 @@ export class EditorComponent implements OnInit, OnDestroy, AfterViewInit {
   // Tree management
   tree: FileNode[] = [];
   expandedNodes = new Set<number>();
+
+  memberProfiles: User[] = [];
+  projectOwnerId: number = 0;
 
   private subs: Subscription[] = [];
   private changeTimer: any;
@@ -403,6 +425,9 @@ export class EditorComponent implements OnInit, OnDestroy, AfterViewInit {
         if (delta.content !== undefined) {
           this.editorContent = delta.content;
           this.unsaved = false;
+          // Update last editor name immediately
+          this.authSvc.getUserById(delta.authorId).subscribe(u => this.lastEditorName = u.username);
+          if (this.activeFile) this.activeFile.updatedAt = new Date().toISOString();
         }
       }
     }));
@@ -698,9 +723,28 @@ export class EditorComponent implements OnInit, OnDestroy, AfterViewInit {
   }
 
   toggleComments(): void {
-    if (this.rightPanelMode === 'comments') { this.rightPanelMode = null; return; }
-    this.rightPanelMode = 'comments';
-    this.loadComments();
+    this.rightPanelMode = this.rightPanelMode === 'comments' ? null : 'comments';
+    if (this.rightPanelMode === 'comments') this.loadComments();
+  }
+
+  toggleMembers(): void {
+    this.rightPanelMode = this.rightPanelMode === 'members' ? null : 'members';
+    if (this.rightPanelMode === 'members') this.loadMembers();
+  }
+
+  loadMembers(): void {
+    this.memberProfiles = [];
+    this.projectSvc.getById(this.projectId).subscribe(p => {
+      this.projectOwnerId = p.ownerId;
+      const ids = [...new Set([p.ownerId, ...p.memberIds])];
+      ids.forEach(id => {
+        this.authSvc.getUserById(id).subscribe(u => {
+          if (!this.memberProfiles.find(m => m.userId === u.userId)) {
+            this.memberProfiles.push(u);
+          }
+        });
+      });
+    });
   }
 
   loadComments(): void {
