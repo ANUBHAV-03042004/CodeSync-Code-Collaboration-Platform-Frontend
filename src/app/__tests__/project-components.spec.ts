@@ -129,9 +129,9 @@ describe('ProjectDetailComponent', () => {
   let toastSvc: ReturnType<typeof makeToast>;
 
   const mockFiles = [
-    { fileId: 1, name: 'Main.java', path: 'src/', language: 'Java', fileType: 'FILE', deleted: false },
-    { fileId: 2, name: 'util/', path: 'src/', language: '', fileType: 'FOLDER', deleted: false },
-    { fileId: 3, name: 'OldFile.java', path: 'src/', language: 'Java', fileType: 'FILE', deleted: true }
+    { fileId: 1, name: 'Main.java', path: 'src/', language: 'Java', folder: false, deleted: false },
+    { fileId: 2, name: 'util/', path: 'src/', language: '', folder: true, deleted: false },
+    { fileId: 3, name: 'OldFile.java', path: 'src/', language: 'Java', folder: false, deleted: true }
   ];
 
   beforeEach(async () => {

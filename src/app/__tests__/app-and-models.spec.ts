@@ -85,13 +85,13 @@ describe('Model type shapes', () => {
     expect(['PUBLIC', 'PRIVATE']).toContain(p.visibility);
   });
 
-  it('CodeFile should have fileType enum values', () => {
+  it('CodeFile should have folder boolean', () => {
     const f: CodeFile = {
       fileId: 1, projectId: 1, name: 'Main.java', path: 'src/',
-      language: 'Java', content: '', fileType: 'FILE', deleted: false,
+      language: 'Java', content: '', folder: false, deleted: false,
       createdBy: 1, lastEditedBy: 1, createdAt: '', updatedAt: ''
     };
-    expect(['FILE', 'FOLDER']).toContain(f.fileType);
+    expect(typeof f.folder).toBe('boolean');
   });
 
   it('ExecutionJob should have status enum values', () => {
@@ -122,7 +122,7 @@ describe('Model type shapes', () => {
 
   it('Snapshot should have branch field', () => {
     const s: Snapshot = {
-      id: 1, projectId: 1, fileId: 1, authorId: 1, message: 'init',
+      snapshotId: 1, projectId: 1, fileId: 1, authorId: 1, message: 'init',
       content: 'code', branch: 'main', tag: '', version: 1, createdAt: ''
     };
     expect(s.branch).toBe('main');
