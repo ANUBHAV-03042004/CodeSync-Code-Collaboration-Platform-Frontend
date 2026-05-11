@@ -172,10 +172,17 @@ export class NotificationService {
   unreadCount$ = new Subject<number>();
 
   private mapNotif(raw: any): Notification {
+    // FIX: Backend uses LocalDateTime which serializes without timezone info.
+    // We append 'Z' to ensure the browser treats it as UTC and converts to local time (e.g. IST).
+    let createdAt = raw.createdAt;
+    if (createdAt && typeof createdAt === 'string' && !createdAt.endsWith('Z') && !createdAt.includes('+')) {
+      createdAt += 'Z';
+    }
     return {
       ...raw,
       id: raw.id || raw.notificationId,
-      read: raw.read !== undefined ? raw.read : raw.isRead
+      read: raw.read !== undefined ? raw.read : raw.isRead,
+      createdAt: createdAt
     };
   }
 
