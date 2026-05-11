@@ -4,6 +4,7 @@ import { Observable, Subject } from 'rxjs';
 import { WebSocketService } from './websocket.service';
 import { environment } from '../../environments/environment';
 import { CreateSessionRequest, EditDelta, CursorPosition } from '../core/models';
+import { AuthService } from './auth.service';
 
 const WS_NAME = 'collab';
 
@@ -77,20 +78,27 @@ export class CollabService {
     return status$;
   }
 
+  private authSvc = inject(AuthService);
+
+  private getHeaders(): { [key: string]: string } {
+    const user = this.authSvc.getCurrentUser();
+    return user ? { 'X-User-Id': user.userId.toString() } : {};
+  }
+
   sendEditDelta(sessionId: string, delta: any): void {
-    this.ws.publish(WS_NAME, `/app/session.${sessionId}.edit`, delta);
+    this.ws.publish(WS_NAME, `/app/session.${sessionId}.edit`, delta, this.getHeaders());
   }
 
   sendCursorPosition(sessionId: string, line: number, col: number): void {
-    this.ws.publish(WS_NAME, `/app/session.${sessionId}.cursor`, { line, col });
+    this.ws.publish(WS_NAME, `/app/session.${sessionId}.cursor`, { line, col }, this.getHeaders());
   }
 
   sendLeave(sessionId: string): void {
-    this.ws.publish(WS_NAME, `/app/session.${sessionId}.leave`, {});
+    this.ws.publish(WS_NAME, `/app/session.${sessionId}.leave`, {}, this.getHeaders());
   }
 
   sendSessionEvent(sessionId: string, event: any): void {
-    this.ws.publish(WS_NAME, `/app/session.${sessionId}.events`, event);
+    this.ws.publish(WS_NAME, `/app/session.${sessionId}.events`, event, this.getHeaders());
   }
 
   disconnectFromSession(): void {

@@ -57,10 +57,10 @@ export class WebSocketService implements OnDestroy {
     });
   }
 
-  publish(name: string, destination: string, body: any): void {
+  publish(name: string, destination: string, body: any, headers: { [key: string]: string } = {}): void {
     const client = this.clients.get(name);
     if (client?.connected) {
-      client.publish({ destination, body: JSON.stringify(body) });
+      client.publish({ destination, body: JSON.stringify(body), headers });
     }
   }
 

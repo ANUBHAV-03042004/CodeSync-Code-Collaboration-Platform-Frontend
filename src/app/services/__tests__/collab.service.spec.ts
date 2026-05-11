@@ -3,6 +3,7 @@ import { HttpClientTestingModule, HttpTestingController } from '@angular/common/
 import { CollabService } from '../collab.service';
 import { WebSocketService } from '../websocket.service';
 import { environment } from '../../../environments/environment';
+import { AuthService } from '../auth.service';
 
 const BASE = `${environment.apiBase}/api/v1/sessions`;
 
@@ -19,11 +20,16 @@ describe('CollabService', () => {
       disconnect: jest.fn()
     };
 
+    const authSvc = {
+      getCurrentUser: jest.fn().mockReturnValue({ userId: 123, username: 'testuser' })
+    };
+
     TestBed.configureTestingModule({
       imports: [HttpClientTestingModule],
       providers: [
         CollabService,
-        { provide: WebSocketService, useValue: wsSvc }
+        { provide: WebSocketService, useValue: wsSvc },
+        { provide: AuthService, useValue: authSvc }
       ]
     });
     service = TestBed.inject(CollabService);
@@ -89,12 +95,22 @@ describe('CollabService', () => {
 
   it('should call ws.publish on sendEditDelta', () => {
     service.sendEditDelta('sess-1', { type: 'insert', text: 'x' });
-    expect(wsSvc.publish).toHaveBeenCalledWith('collab', '/app/session.sess-1.edit', { type: 'insert', text: 'x' });
+    expect(wsSvc.publish).toHaveBeenCalledWith(
+      'collab', 
+      '/app/session.sess-1.edit', 
+      { type: 'insert', text: 'x' },
+      { 'X-User-Id': '123' }
+    );
   });
 
   it('should call ws.publish on sendCursorPosition', () => {
     service.sendCursorPosition('sess-1', 10, 5);
-    expect(wsSvc.publish).toHaveBeenCalledWith('collab', '/app/session.sess-1.cursor', { line: 10, col: 5 });
+    expect(wsSvc.publish).toHaveBeenCalledWith(
+      'collab', 
+      '/app/session.sess-1.cursor', 
+      { line: 10, col: 5 },
+      { 'X-User-Id': '123' }
+    );
   });
 
   it('should call ws.disconnect on disconnectFromSession', () => {
