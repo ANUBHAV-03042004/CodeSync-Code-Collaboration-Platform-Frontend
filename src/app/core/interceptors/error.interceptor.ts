@@ -8,14 +8,17 @@ export const errorInterceptor: HttpInterceptorFn = (req, next) => {
 
   return next(req).pipe(
     catchError(err => {
+      // Skip generic toasts for specific auth-related requests so components can show better messages
+      const isAuthRequest = req.url.includes('/api/v1/auth/');
+
       if (err.status === 0) {
         toast.error('Cannot connect to server. Check your connection.');
       } else if (err.status >= 500) {
-        toast.error(`Server error (${err.status}). Please try again.`);
+        if (!isAuthRequest) toast.error(`Server error (${err.status}). Please try again.`);
       } else if (err.status === 403) {
-        toast.error('You do not have permission to perform this action.');
+        if (!isAuthRequest) toast.error('You do not have permission to perform this action.');
       } else if (err.status === 404) {
-        toast.error('Resource not found.');
+        if (!isAuthRequest) toast.error('Resource not found.');
       }
       return throwError(() => err);
     })
