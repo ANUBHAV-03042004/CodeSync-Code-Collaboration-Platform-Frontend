@@ -34,7 +34,7 @@ const createProjectSvcMock = () => ({
   getPublic: jest.fn().mockReturnValue(of([])),
   getByMember: jest.fn().mockReturnValue(of([])),
   create: jest.fn().mockReturnValue(of({ projectId: 1, name: 'Test' })),
-  getById: jest.fn().mockReturnValue(of({ projectId: 1, name: 'Test', description: '', language: 'Java', visibility: 'PUBLIC', memberIds: [], starCount: 0, forkCount: 0, archived: false })),
+  getById: jest.fn().mockReturnValue(of({ projectId: 1, name: 'Test', description: '', language: 'Java', visibility: 'PUBLIC', ownerId: 1, memberIds: [], starCount: 0, forkCount: 0, archived: false })),
   star: jest.fn().mockReturnValue(of(null)),
   fork: jest.fn().mockReturnValue(of({ projectId: 2 })),
   search: jest.fn().mockReturnValue(of([])),
@@ -541,6 +541,18 @@ describe('AdminDashboardComponent', () => {
 // ═══════════════════════════════════════════════════════════════════════════════
 // EditorComponent
 // ═══════════════════════════════════════════════════════════════════════════════
+const createNotificationSvcMock = () => ({
+  getAll: jest.fn().mockReturnValue(of([])),
+  getUnread: jest.fn().mockReturnValue(of([])),
+  getBadgeCount: jest.fn().mockReturnValue(of({ unreadCount: 0 })),
+  markRead: jest.fn().mockReturnValue(of(null)),
+  broadcast: jest.fn().mockReturnValue(of(null)),
+  connectPush: jest.fn(),
+  disconnectPush: jest.fn(),
+  notification$: { subscribe: jest.fn() },
+  unreadCount$: { subscribe: jest.fn() }
+});
+
 import { EditorComponent } from '../features/editor/editor.component';
 import { FileService } from '../services/file.service';
 import { CollabService } from '../services/collab.service';
@@ -572,6 +584,7 @@ describe('EditorComponent', () => {
         { provide: FileService, useValue: fileSvc },
         { provide: ExecutionService, useValue: execSvc },
         { provide: CollabService, useValue: collabSvc },
+        { provide: NotificationService, useValue: createNotificationSvcMock() },
         { provide: ProjectService, useValue: createProjectSvcMock() },
         { provide: VersionService, useValue: createVersionSvcMock() },
         { provide: CommentService, useValue: createCommentSvcMock() },
@@ -579,7 +592,7 @@ describe('EditorComponent', () => {
         { provide: ToastService, useValue: createToastSvcMock() },
         { provide: ActivatedRoute, useValue: { 
             snapshot: { 
-              paramMap: { get: () => '1' },
+              paramMap: { get: (k: string) => k === 'projectId' ? '1' : null },
               queryParamMap: { get: () => null }
             } 
           } 
@@ -594,6 +607,7 @@ describe('EditorComponent', () => {
     .compileComponents();
     fixture = TestBed.createComponent(EditorComponent);
     component = fixture.componentInstance;
+    component.projectOwnerId = 1; // Match mockUser.userId
     fixture.detectChanges();
   });
 
