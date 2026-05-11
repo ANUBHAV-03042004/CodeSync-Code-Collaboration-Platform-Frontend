@@ -221,6 +221,7 @@ describe('RegisterComponent', () => {
     component.form.patchValue({ username: 'validuser', email: 'x@x.com', password: 'password123' });
     expect(component.form.valid).toBe(true);
   });
+  // check
 
   it('should compute strength as weak for short password', () => {
     component.updateStrength('abc');
@@ -571,6 +572,7 @@ describe('EditorComponent', () => {
         { provide: FileService, useValue: fileSvc },
         { provide: ExecutionService, useValue: execSvc },
         { provide: CollabService, useValue: collabSvc },
+        { provide: ProjectService, useValue: createProjectSvcMock() },
         { provide: VersionService, useValue: createVersionSvcMock() },
         { provide: CommentService, useValue: createCommentSvcMock() },
         { provide: AuthService, useValue: createAuthSvcMock() },
