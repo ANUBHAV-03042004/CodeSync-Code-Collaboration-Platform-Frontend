@@ -34,6 +34,7 @@ import { ToastService } from '../../shared/components/toast/toast.service';
                (click)="openFile(f)">
             <span class="f-icon">{{ getFileIcon(f.language) }}</span>
             <span class="f-name">{{ f.name }}</span>
+            <button class="delete-file-btn" (click)="deleteFile(f, $event)">✕</button>
             <div class="active-indicator" *ngIf="f.fileId === activeFile?.fileId"></div>
           </div>
           <div class="empty-files" *ngIf="!files.length && !loading">
@@ -60,9 +61,13 @@ import { ToastService } from '../../shared/components/toast/toast.service';
               <span>{{ activeFile.name }}</span>
               <span class="unsaved-mark" *ngIf="unsaved">●</span>
             </div>
+            <div class="last-edit-info" *ngIf="activeFile">
+              Changed by: <b>{{ lastEditorName }}</b> · {{ activeFile.updatedAt | date:'MMM d, HH:mm' }}
+            </div>
           </div>
 
           <div class="toolbar-actions">
+            <button class="nb-action-btn" (click)="refresh()" title="Refresh">🔄</button>
             <button class="nb-action-btn" (click)="save()" [disabled]="!unsaved || !activeFile" title="Save">💾</button>
             <button class="nb-action-btn run" (click)="runCode()" [disabled]="running || !activeFile" title="Run">▶</button>
             <button class="nb-action-btn" (click)="createSnapshot()" [disabled]="!activeFile" title="Snapshot">📸</button>
@@ -113,7 +118,7 @@ import { ToastService } from '../../shared/components/toast/toast.service';
                 <input [(ngModel)]="stdin" placeholder="provide stdin here..." class="console-input" (keydown.enter)="runCode()" />
                 <button (click)="runCode()" [disabled]="running || !activeFile" class="nb-btn-sm btn-green run-btn">
                    {{ running ? 'EXECUTING...' : 'RUN CODE' }}
-                </button>
+                 </button>
               </div>
               <div class="output-area">
                 <div class="output-hdr" *ngIf="currentJob">
@@ -164,7 +169,10 @@ import { ToastService } from '../../shared/components/toast/toast.service';
                 <span class="v-tag">{{ snap.branch }}</span>
               </div>
               <div class="v-meta">v{{ snap.version }} · {{ snap.createdAt | date:'MMM d, HH:mm' }}</div>
-              <button class="nb-btn-sm btn-white w-full mt-8" (click)="restoreSnapshot(snap.snapshotId)">RESTORE</button>
+              <div class="flex gap-8 mt-8">
+                <button class="nb-btn-sm btn-white flex-1" (click)="restoreSnapshot(snap.snapshotId)">RESTORE</button>
+                <button class="nb-btn-sm btn-white text-red" (click)="deleteSnapshot(snap.snapshotId)">DELETE</button>
+              </div>
             </div>
             <div class="empty-hint" *ngIf="!snapshots.length">No snapshots found.</div>
           </div>
@@ -200,9 +208,17 @@ import { ToastService } from '../../shared/components/toast/toast.service';
     
     .file-scroller { flex: 1; overflow-y: auto; padding: 12px; display: flex; flex-direction: column; gap: 6px; }
     .file-node { display: flex; align-items: center; gap: 12px; padding: 12px 16px; cursor: pointer; font-weight: 700; font-size: 14px; position: relative; border: 3px solid transparent; transition: all .15s; }
-    .file-node:hover { background: rgba(0,0,0,0.06); }
-    .file-node.active { background: var(--W); border-color: var(--K); box-shadow: 4px 4px 0 var(--K); }
-    .active-indicator { position: absolute; left: 0; top: 12px; bottom: 12px; width: 4px; background: var(--B); }
+    .file-node:hover .delete-file-btn { opacity: 1; }
+    .delete-file-btn { position: absolute; right: 12px; opacity: 0; background: none; border: none; color: var(--R); font-size: 16px; cursor: pointer; transition: opacity .2s; }
+    .delete-file-btn:hover { transform: scale(1.2); }
+
+    .last-edit-info { margin-left: 20px; font-size: 11px; color: #666; font-family: inherit; display: flex; align-items: center; gap: 4px; }
+    .last-edit-info b { color: var(--K); }
+
+    .text-red { color: var(--R) !important; }
+    .flex-1 { flex: 1; }
+    .gap-8 { gap: 8px; }
+
     .sidebar-footer { padding: 20px; border-top: 4px solid var(--K); background: var(--W); }
 
     .nb-main { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
@@ -311,6 +327,7 @@ export class EditorComponent implements OnInit, OnDestroy, AfterViewInit {
   newComment = '';
   newFileName = '';
   remoteCursors = new Map<string, CursorPosition>();
+  lastEditorName = 'Loading...';
 
   private subs: Subscription[] = [];
   private changeTimer: any;
@@ -332,8 +349,50 @@ export class EditorComponent implements OnInit, OnDestroy, AfterViewInit {
       this.collabSvc.connectToSession(sess);
       this.toast.success('Joined collaboration session!');
     }
-    // In a real app, fetch project name here
     this.projectName = `Project #${this.projectId}`;
+    this.setupCollabListeners();
+  }
+
+  private setupCollabListeners(): void {
+    // 1. Edit Deltas
+    this.subs.push(this.collabSvc.editDelta$.subscribe(delta => {
+      if (delta.authorId !== this.authSvc.currentUserValue?.userId) {
+        // Simple overwrite for now. In a real app, use an OT/CRDT library like Yjs or Automerge.
+        if (delta.content !== undefined) {
+          this.editorContent = delta.content;
+          this.unsaved = false;
+        }
+      }
+    }));
+
+    // 2. Cursor Positions
+    this.subs.push(this.collabSvc.cursorPos$.subscribe(pos => {
+      if (pos.userId !== this.authSvc.currentUserValue?.userId) {
+        this.remoteCursors.set(pos.userId.toString(), pos);
+      }
+    }));
+
+    // 3. Session Events (Join/Leave/Kick/End)
+    this.subs.push(this.collabSvc.sessionEvent$.subscribe(event => {
+      if (event.type === 'PARTICIPANT_JOINED') {
+        this.toast.info(`User ${event.userId} joined the session`);
+      } else if (event.type === 'PARTICIPANT_LEFT') {
+        this.toast.info(`User ${event.userId} left the session`);
+        this.remoteCursors.delete(event.userId.toString());
+      } else if (event.type === 'SESSION_ENDED') {
+        this.toast.warning('The collaboration session has ended');
+        this.sessionId = null;
+        this.remoteCursors.clear();
+      }
+    }));
+  }
+
+  refresh(): void {
+    this.loadFiles();
+    if (this.activeFile) {
+      this.openFile(this.activeFile);
+    }
+    this.toast.success('Editor refreshed');
   }
 
   loadFiles(): void {
@@ -365,6 +424,7 @@ export class EditorComponent implements OnInit, OnDestroy, AfterViewInit {
       next: r => {
         this.editorContent = r.content;
         this.unsaved = false;
+        this.loadLastEditor();
       },
       error: (err) => {
         console.error('Content load error', err);
@@ -374,6 +434,17 @@ export class EditorComponent implements OnInit, OnDestroy, AfterViewInit {
     // Load side data
     if (this.rightPanelMode === 'comments') this.loadComments();
     if (this.rightPanelMode === 'versions') this.loadHistory();
+  }
+
+  loadLastEditor(): void {
+    if (!this.activeFile?.lastEditedBy) {
+      this.lastEditorName = 'Initial Version';
+      return;
+    }
+    this.authSvc.getUserById(this.activeFile.lastEditedBy).subscribe({
+      next: user => this.lastEditorName = user.username,
+      error: () => this.lastEditorName = `User #${this.activeFile?.lastEditedBy}`
+    });
   }
 
   createFile(): void {
@@ -396,6 +467,19 @@ export class EditorComponent implements OnInit, OnDestroy, AfterViewInit {
         console.error('File create error', err);
         this.toast.error(err.status === 400 ? 'File already exists or invalid name' : 'Failed to create file');
       }
+    });
+  }
+
+  deleteFile(file: CodeFile, event: Event): void {
+    event.stopPropagation();
+    if (!confirm(`Are you sure you want to delete ${file.name}?`)) return;
+    this.fileSvc.delete(file.fileId).subscribe({
+      next: () => {
+        this.toast.success('File deleted');
+        if (this.activeFile?.fileId === file.fileId) this.activeFile = null;
+        this.loadFiles();
+      },
+      error: () => this.toast.error('Failed to delete file')
     });
   }
 
@@ -540,6 +624,17 @@ export class EditorComponent implements OnInit, OnDestroy, AfterViewInit {
       this.editorContent = snap.content;
       this.unsaved = true;
       this.toast.success('Restored snapshot content');
+    });
+  }
+
+  deleteSnapshot(snapshotId: number): void {
+    if (!confirm('Are you sure you want to delete this snapshot?')) return;
+    this.versionSvc.deleteSnapshot(snapshotId).subscribe({
+      next: () => {
+        this.toast.success('Snapshot deleted');
+        this.loadHistory();
+      },
+      error: () => this.toast.error('Failed to delete snapshot')
     });
   }
 

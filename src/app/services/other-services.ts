@@ -97,6 +97,10 @@ export class VersionService {
     return this.http.post<Snapshot>(`${this.base}/${id}/restore`, {});
   }
 
+  deleteSnapshot(id: number): Observable<void> {
+    return this.http.delete<void>(`${this.base}/${id}`);
+  }
+
   createBranch(fileId: number, branchName: string): Observable<Snapshot> {
     return this.http.post<Snapshot>(`${this.base}/branch`, { fileId, branchName });
   }
