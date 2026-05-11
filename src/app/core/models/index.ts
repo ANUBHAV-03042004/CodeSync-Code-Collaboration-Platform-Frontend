@@ -112,6 +112,7 @@ export interface CreateSessionRequest {
 
 export interface EditDelta {
   authorId: number;
+  fileId: number;
   content: string;
   timestamp: number;
 }

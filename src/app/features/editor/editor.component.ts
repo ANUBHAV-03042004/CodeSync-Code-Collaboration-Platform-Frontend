@@ -454,13 +454,16 @@ export class EditorComponent implements OnInit, OnDestroy, AfterViewInit {
     // 1. Edit Deltas
     this.subs.push(this.collabSvc.editDelta$.subscribe(delta => {
       if (delta.authorId !== this.authSvc.getCurrentUser()?.userId) {
-        // Simple overwrite for now. In a real app, use an OT/CRDT library like Yjs or Automerge.
-        if (delta.content !== undefined) {
-          this.editorContent = delta.content;
-          this.unsaved = false;
-          // Update last editor name immediately
-          this.authSvc.getUserById(delta.authorId).subscribe(u => this.lastEditorName = u.username);
-          if (this.activeFile) this.activeFile.updatedAt = new Date().toISOString();
+        // Only apply if the delta belongs to the currently active file
+        if (delta.fileId === this.activeFile?.fileId) {
+          if (delta.content !== undefined) {
+            this.editorContent = delta.content;
+            this.unsaved = false;
+            this.authSvc.getUserById(delta.authorId).subscribe(u => this.lastEditorName = u.username);
+            if (this.activeFile) {
+              this.activeFile.updatedAt = new Date().toISOString();
+            }
+          }
         }
       }
     }));
