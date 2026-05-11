@@ -457,7 +457,7 @@ export class ProjectCreateComponent implements AfterViewInit {
             <div class="card-body">
               <div class="info-item">
                 <label>OWNER</label>
-                <div class="owner-tag">USER #{{ project.ownerId }}</div>
+                <div class="owner-tag">{{ ownerName || 'User #' + project.ownerId }}</div>
               </div>
               <div class="info-item">
                 <label>CREATED</label>
@@ -475,10 +475,11 @@ export class ProjectCreateComponent implements AfterViewInit {
               <span class="card-label">COLLABORATORS</span>
             </div>
             <div class="collab-list">
-              <div class="collab-item" *ngFor="let mid of project.memberIds">
-                <div class="avatar-sm">U{{ mid }}</div>
-                <span>User #{{ mid }}</span>
+              <div class="collab-item" *ngFor="let m of members">
+                <div class="avatar-sm">{{ m.username[0].toUpperCase() }}</div>
+                <span>{{ m.username }}</span>
               </div>
+              <div class="empty-hint" *ngIf="!members.length">Only the owner is here.</div>
             </div>
           </div>
 
@@ -607,6 +608,8 @@ export class ProjectDetailComponent implements OnInit, AfterViewInit {
   project: Project | null = null;
   files: CodeFile[] = [];
   currentUser = this.authSvc.getCurrentUser();
+  ownerName = '';
+  members: any[] = [];
 
   ngOnInit(): void {
     const id = Number(this.route.snapshot.paramMap.get('id'));
@@ -615,7 +618,23 @@ export class ProjectDetailComponent implements OnInit, AfterViewInit {
   }
 
   loadProject(id: number): void {
-    this.projectSvc.getById(id).subscribe(p => this.project = p);
+    this.projectSvc.getById(id).subscribe(p => {
+      this.project = p;
+      this.loadMemberNames();
+    });
+  }
+
+  loadMemberNames(): void {
+    if (!this.project) return;
+    this.authSvc.getUserById(this.project.ownerId).subscribe(u => this.ownerName = u.username);
+    this.members = [];
+    (this.project.memberIds || []).forEach(mid => {
+      this.authSvc.getUserById(mid).subscribe(u => {
+        if (!this.members.find(m => m.userId === u.userId)) {
+          this.members.push(u);
+        }
+      });
+    });
   }
 
   ngAfterViewInit(): void {
