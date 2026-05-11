@@ -202,7 +202,7 @@ interface FileNode {
       <!-- New File Modal -->
       <div class="nb-modal-overlay" *ngIf="showNewFileDialog">
         <div class="nb-modal">
-          <div class="modal-hdr">NEW FILE {{ activeFile?.folder ? 'IN ' + activeFile.name : '' }}</div>
+          <div class="modal-hdr">NEW FILE {{ activeFile?.folder ? 'IN ' + activeFile?.name : '' }}</div>
           <div class="modal-body">
             <input [(ngModel)]="newFileName" placeholder="filename.js" class="nb-input w-full" (keydown.enter)="createFile()" #newFileInput />
             <div class="modal-actions mt-16">
@@ -216,7 +216,7 @@ interface FileNode {
       <!-- New Folder Modal -->
       <div class="nb-modal-overlay" *ngIf="showNewFolderDialog">
         <div class="nb-modal">
-          <div class="modal-hdr">NEW FOLDER {{ activeFile?.folder ? 'IN ' + activeFile.name : '' }}</div>
+          <div class="modal-hdr">NEW FOLDER {{ activeFile?.folder ? 'IN ' + activeFile?.name : '' }}</div>
           <div class="modal-body">
             <input [(ngModel)]="newFolderName" placeholder="folder-name" class="nb-input w-full" (keydown.enter)="createFolder()" #newFolderInput />
             <div class="modal-actions mt-16">
