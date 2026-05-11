@@ -571,6 +571,7 @@ describe('EditorComponent', () => {
         { provide: FileService, useValue: fileSvc },
         { provide: ExecutionService, useValue: execSvc },
         { provide: CollabService, useValue: collabSvc },
+        { provide: ProjectService, useValue: createProjectSvcMock() },
         { provide: VersionService, useValue: createVersionSvcMock() },
         { provide: CommentService, useValue: createCommentSvcMock() },
         { provide: AuthService, useValue: createAuthSvcMock() },

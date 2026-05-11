@@ -55,10 +55,10 @@ describe('CollabService', () => {
     req.flush(null);
   });
 
-  it('should POST endSession', () => {
+  it('should DELETE endSession', () => {
     service.endSession('abc-123').subscribe();
-    const req = http.expectOne(`${BASE}/abc-123/end`);
-    expect(req.request.method).toBe('POST');
+    const req = http.expectOne(`${BASE}/abc-123`);
+    expect(req.request.method).toBe('DELETE');
     req.flush(null);
   });
 
