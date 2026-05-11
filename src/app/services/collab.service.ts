@@ -31,7 +31,7 @@ export class CollabService {
   }
 
   endSession(sessionId: string): Observable<void> {
-    return this.http.post<void>(`${this.base}/${sessionId}/end`, {});
+    return this.http.delete<void>(`${this.base}/${sessionId}`);
   }
 
   kickParticipant(sessionId: string, targetUserId: number): Observable<void> {
@@ -50,19 +50,28 @@ export class CollabService {
   connectToSession(sessionId: string): Subject<boolean> {
     const status$ = this.ws.connect(WS_NAME, environment.wsCollabEndpoint);
 
-    // Subscribe to edit deltas
-    this.ws.subscribe(WS_NAME, `/topic/session.${sessionId}.edit`, msg => {
-      this.editDelta$.next(JSON.parse(msg.body));
-    });
+    // IMPORTANT: Wait for STOMP connection before subscribing.
+    // Previously subscriptions fired immediately and were silently dropped
+    // because client.connected was still false.
+    status$.subscribe(connected => {
+      if (connected) {
+        console.log('[CollabService] STOMP connected, subscribing to session', sessionId);
 
-    // Subscribe to cursor positions
-    this.ws.subscribe(WS_NAME, `/topic/session.${sessionId}.cursor`, msg => {
-      this.cursorPos$.next(JSON.parse(msg.body));
-    });
+        // Subscribe to edit deltas
+        this.ws.subscribe(WS_NAME, `/topic/session.${sessionId}.edit`, msg => {
+          this.editDelta$.next(JSON.parse(msg.body));
+        });
 
-    // Subscribe to session events (join/leave/kick/end)
-    this.ws.subscribe(WS_NAME, `/topic/session.${sessionId}.events`, msg => {
-      this.sessionEvent$.next(JSON.parse(msg.body));
+        // Subscribe to cursor positions
+        this.ws.subscribe(WS_NAME, `/topic/session.${sessionId}.cursor`, msg => {
+          this.cursorPos$.next(JSON.parse(msg.body));
+        });
+
+        // Subscribe to session events (join/leave/kick/end)
+        this.ws.subscribe(WS_NAME, `/topic/session.${sessionId}.events`, msg => {
+          this.sessionEvent$.next(JSON.parse(msg.body));
+        });
+      }
     });
 
     return status$;
