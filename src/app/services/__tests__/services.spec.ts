@@ -117,7 +117,7 @@ describe('FileService', () => {
 
   const mockFile = {
     fileId: 1, projectId: 1, name: 'Main.java', path: 'src/Main.java',
-    language: 'Java', content: 'public class Main {}', fileType: 'FILE' as const,
+    language: 'Java', content: 'public class Main {}', folder: false,
     deleted: false, createdBy: 1, lastEditedBy: 1, createdAt: '', updatedAt: ''
   };
 
@@ -265,7 +265,7 @@ describe('VersionService', () => {
   const BASE = `${environment.apiBase}/api/v1/versions`;
 
   const mockSnap = {
-    id: 1, projectId: 1, fileId: 1, authorId: 1, message: 'Init',
+    snapshotId: 1, projectId: 1, fileId: 1, authorId: 1, message: 'Init',
     content: 'code', branch: 'main', tag: '', version: 1, createdAt: ''
   };
 
@@ -282,7 +282,7 @@ describe('VersionService', () => {
   });
 
   it('should GET snapshot by id', () => {
-    service.getById(1).subscribe(s => expect(s.id).toBe(1));
+    service.getById(1).subscribe(s => expect(s.snapshotId).toBe(1));
     http.expectOne(`${BASE}/1`).flush(mockSnap);
   });
 

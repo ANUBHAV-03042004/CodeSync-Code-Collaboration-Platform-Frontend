@@ -555,7 +555,7 @@ describe('EditorComponent', () => {
 
   const mockFile = {
     fileId: 1, projectId: 1, name: 'Main.java', path: 'src/Main.java',
-    language: 'Java', content: 'class Main {}', fileType: 'FILE', deleted: false,
+    language: 'Java', content: 'class Main {}', folder: false, deleted: false,
     createdBy: 1, lastEditedBy: 1, createdAt: '', updatedAt: ''
   };
 
@@ -575,7 +575,13 @@ describe('EditorComponent', () => {
         { provide: CommentService, useValue: createCommentSvcMock() },
         { provide: AuthService, useValue: createAuthSvcMock() },
         { provide: ToastService, useValue: createToastSvcMock() },
-        { provide: ActivatedRoute, useValue: { snapshot: { paramMap: { get: () => '1' } } } }
+        { provide: ActivatedRoute, useValue: { 
+            snapshot: { 
+              paramMap: { get: () => '1' },
+              queryParamMap: { get: () => null }
+            } 
+          } 
+        }
       ]
     })
     // EditorComponent is standalone — schemas on the TestBed host don't propagate
