@@ -89,6 +89,10 @@ export class CollabService {
     this.ws.publish(WS_NAME, `/app/session.${sessionId}.leave`, {});
   }
 
+  sendSessionEvent(sessionId: string, event: any): void {
+    this.ws.publish(WS_NAME, `/app/session.${sessionId}.events`, event);
+  }
+
   disconnectFromSession(): void {
     this.ws.disconnect(WS_NAME);
   }
