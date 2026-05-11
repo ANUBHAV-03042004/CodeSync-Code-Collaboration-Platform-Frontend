@@ -87,15 +87,18 @@ interface FileNode {
             </div>
           </div>
 
-          <div class="toolbar-actions">
-            <button class="nb-action-btn" (click)="refresh()" title="Refresh">🔄</button>
-            <button class="nb-action-btn" (click)="save()" [disabled]="!unsaved || !activeFile" title="Save">💾</button>
-            <button class="nb-action-btn run" (click)="runCode()" [disabled]="running || !activeFile" title="Run">▶</button>
-            <button class="nb-action-btn" (click)="createSnapshot()" [disabled]="!activeFile" title="Snapshot">📸</button>
-            <button class="nb-action-btn" (click)="toggleVersions()" [class.active]="rightPanelMode === 'versions'" [disabled]="!activeFile" title="History">🕒</button>
-            <button class="nb-action-btn" (click)="toggleComments()" [class.active]="rightPanelMode === 'comments'" [disabled]="!activeFile" title="Comments">💬</button>
-            <button class="nb-action-btn" (click)="toggleMembers()" [class.active]="rightPanelMode === 'members'" title="Collaborators">👥</button>
+          <div class="toolbar-actions" [class.open]="toolbarOpen">
+            <button class="nb-action-btn" (click)="refresh(); toolbarOpen=false" title="Refresh">🔄</button>
+            <button class="nb-action-btn" (click)="save(); toolbarOpen=false" [disabled]="!unsaved || !activeFile" title="Save">💾</button>
+            <button class="nb-action-btn run" (click)="runCode(); toolbarOpen=false" [disabled]="running || !activeFile" title="Run">▶</button>
+            <button class="nb-action-btn" (click)="createSnapshot(); toolbarOpen=false" [disabled]="!activeFile" title="Snapshot">📸</button>
+            <button class="nb-action-btn" (click)="toggleVersions(); toolbarOpen=false" [class.active]="rightPanelMode === 'versions'" [disabled]="!activeFile" title="History">🕒</button>
+            <button class="nb-action-btn" (click)="toggleComments(); toolbarOpen=false" [class.active]="rightPanelMode === 'comments'" [disabled]="!activeFile" title="Comments">💬</button>
+            <button class="nb-action-btn" (click)="toggleMembers(); toolbarOpen=false" [class.active]="rightPanelMode === 'members'" title="Collaborators">👥</button>
           </div>
+          <button class="nb-toolbar-toggle" (click)="toolbarOpen = !toolbarOpen">
+            {{ toolbarOpen ? '✕' : '⚙️' }}
+          </button>
         </div>
 
         <div class="editor-body">
@@ -348,6 +351,30 @@ interface FileNode {
     .items-center { align-items: center; }
     .gap-12 { gap: 12px; }
     .mt-16 { margin-top: 16px; }
+
+    .nb-toolbar-toggle { display: none; width: 42px; height: 42px; border: 4px solid var(--K); background: var(--Y); cursor: pointer; box-shadow: 4px 4px 0 var(--K); align-items: center; justify-content: center; font-size: 20px; z-index: 100; }
+
+    @media (max-width: 900px) {
+      .nb-sidebar { width: 60px; }
+      .brand-box .nb-name, .sidebar-header .p-name, .f-name, .sidebar-footer button, .nb-uname, .nb-caret { display: none; }
+      .nb-sidebar:hover { width: 280px; }
+      .nb-sidebar:hover .brand-box .nb-name, .nb-sidebar:hover .sidebar-header .p-name, .nb-sidebar:hover .f-name, .nb-sidebar:hover .sidebar-footer button { display: block; }
+      
+      .nb-toolbar { padding: 0 10px; }
+      .last-edit-info { display: none; }
+      
+      .toolbar-actions { 
+        position: fixed; top: 60px; right: 10px; flex-direction: column; 
+        background: var(--W); border: 4px solid var(--K); padding: 10px; 
+        box-shadow: 8px 8px 0 var(--K); display: none; z-index: 100;
+      }
+      .toolbar-actions.open { display: flex; }
+      .nb-toolbar-toggle { display: flex; }
+    }
+
+    @media (max-width: 600px) {
+      .nb-right-panel { position: fixed; right: 0; top: 0; bottom: 0; z-index: 2000; width: 100%; }
+    }
   `]
 })
 export class EditorComponent implements OnInit, OnDestroy, AfterViewInit {
@@ -384,6 +411,8 @@ export class EditorComponent implements OnInit, OnDestroy, AfterViewInit {
   comments: Comment[] = [];
   snapshots: Snapshot[] = [];
   newComment = '';
+  toolbarOpen = false;
+
   newFileName = '';
   newFolderName = '';
   showNewFolderDialog = false;
