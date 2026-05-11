@@ -221,6 +221,7 @@ describe('RegisterComponent', () => {
     component.form.patchValue({ username: 'validuser', email: 'x@x.com', password: 'password123' });
     expect(component.form.valid).toBe(true);
   });
+  // check
 
   it('should compute strength as weak for short password', () => {
     component.updateStrength('abc');
