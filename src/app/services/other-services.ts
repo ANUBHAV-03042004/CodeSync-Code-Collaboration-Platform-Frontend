@@ -211,7 +211,12 @@ export class NotificationService {
     if (!localStorage.getItem('access_token')) return;
     this.ws.connect('notifications', environment.wsNotificationEndpoint);
     this.ws.subscribe('notifications', '/user/queue/notifications', msg => {
-      const notif: Notification = JSON.parse(msg.body);
+      const raw = JSON.parse(msg.body);
+      const notif: Notification = {
+        ...raw,
+        id: raw.id || raw.notificationId,
+        read: raw.read !== undefined ? raw.read : raw.isRead
+      };
       this.notification$.next(notif);
       this.getBadgeCount().subscribe(r => this.unreadCount$.next(r.unreadCount));
     });

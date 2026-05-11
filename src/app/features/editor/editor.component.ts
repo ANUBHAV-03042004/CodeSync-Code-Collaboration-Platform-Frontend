@@ -7,7 +7,7 @@ import { Subscription } from 'rxjs';
 import { FileService } from '../../services/file.service';
 import { CollabService } from '../../services/collab.service';
 import { ProjectService } from '../../services/project.service';
-import { ExecutionService, VersionService, CommentService } from '../../services/other-services';
+import { ExecutionService, VersionService, CommentService, NotificationService } from '../../services/other-services';
 import { AuthService } from '../../services/auth.service';
 import { CodeFile, ExecutionJob, CursorPosition, Snapshot, Comment, User } from '../../core/models';
 import { ToastService } from '../../shared/components/toast/toast.service';
@@ -107,6 +107,7 @@ interface FileNode {
                        (keydown)="onKeydown($event)"
                        [placeholder]="activeFile ? 'Start coding...' : 'Select a file to start coding...'"
                        [disabled]="!activeFile"
+                       [readOnly]="!canEdit()"
                        [spellcheck]="false"></textarea>
 
              <!-- Remote Cursors -->
@@ -362,6 +363,7 @@ export class EditorComponent implements OnInit, OnDestroy, AfterViewInit {
   private execSvc = inject(ExecutionService);
   private versionSvc = inject(VersionService);
   private commentSvc = inject(CommentService);
+  private notifSvc = inject(NotificationService);
   private authSvc = inject(AuthService);
   private toast = inject(ToastService);
   private ngZone = inject(NgZone);
@@ -422,6 +424,9 @@ export class EditorComponent implements OnInit, OnDestroy, AfterViewInit {
                 this.sessionId = sess;
                 this.collabSvc.connectToSession(sess);
                 this.toast.success('Joined collaboration session!');
+                
+                // Refresh members
+                this.loadMembers();
               },
               error: (err) => {
                 console.error('Failed to join session', err);
@@ -441,6 +446,7 @@ export class EditorComponent implements OnInit, OnDestroy, AfterViewInit {
       });
     }
     this.projectName = `Project #${this.projectId}`;
+    this.loadMembers();
     this.setupCollabListeners();
   }
 
@@ -479,6 +485,16 @@ export class EditorComponent implements OnInit, OnDestroy, AfterViewInit {
         this.toast.warn('The collaboration session has ended');
         this.sessionId = null;
         this.remoteCursors.clear();
+      } else if (event.type === 'FILE_SAVED') {
+        if (event.userId !== this.authSvc.getCurrentUser()?.userId) {
+          this.toast.info(`File was saved by another user`);
+          if (this.activeFile?.fileId === event.fileId) {
+            this.fileSvc.getContent(event.fileId).subscribe(res => {
+              this.editorContent = res.content;
+              this.unsaved = false;
+            });
+          }
+        }
       }
     }));
   }
@@ -686,11 +702,17 @@ export class EditorComponent implements OnInit, OnDestroy, AfterViewInit {
   }
 
   onContentChange(): void {
+    if (!this.canEdit()) return;
     this.unsaved = true;
     if (this.sessionId) {
       clearTimeout(this.changeTimer);
       this.changeTimer = setTimeout(() => {
-        this.collabSvc.sendEditDelta(this.sessionId!, { content: this.editorContent });
+        const user = this.authSvc.getCurrentUser();
+        this.collabSvc.sendEditDelta(this.sessionId!, { 
+          content: this.editorContent,
+          authorId: user?.userId,
+          fileId: this.activeFile?.fileId
+        });
       }, 300);
     }
   }
@@ -700,14 +722,34 @@ export class EditorComponent implements OnInit, OnDestroy, AfterViewInit {
   }
 
   save(): void {
-    if (!this.activeFile) return;
+    if (!this.activeFile || !this.canEdit()) return;
     this.fileSvc.updateContent(this.activeFile.fileId, this.editorContent).subscribe({
       next: () => {
         this.unsaved = false;
         this.toast.success('File saved!');
+        // Broadcast save event if in session
+        if (this.sessionId) {
+          this.collabSvc.sendSessionEvent(this.sessionId, {
+            type: 'FILE_SAVED',
+            userId: this.authSvc.getCurrentUser()?.userId,
+            fileId: this.activeFile?.fileId
+          });
+        }
       },
       error: () => this.toast.error('Failed to save changes')
     });
+  }
+
+  canEdit(): boolean {
+    const user = this.authSvc.getCurrentUser();
+    if (!user) return false;
+    if (!this.activeFile) return false;
+
+    // Owner can always edit
+    if (this.projectOwnerId === user.userId) return true;
+
+    // Collaborators can only edit if there is an active session
+    return !!this.sessionId;
   }
 
   runCode(): void {
@@ -894,6 +936,21 @@ export class EditorComponent implements OnInit, OnDestroy, AfterViewInit {
       }).catch(() => {
         this.toast.success('Collaboration active!');
       });
+
+      // Broadcast to project members
+      const user = this.authSvc.getCurrentUser();
+      const recipients = this.memberProfiles
+        .map(m => m.userId)
+        .filter(id => id !== user?.userId);
+
+      if (recipients.length > 0) {
+        this.notifSvc.broadcast({
+          recipientIds: recipients,
+          title: 'Collaboration Started 👥',
+          message: `${user?.username} is collaborating on ${this.projectName}. Join them!`,
+          deepLinkUrl: `/editor/${this.projectId}?session=${s.sessionId}`
+        }).subscribe();
+      }
     });
   }
 
