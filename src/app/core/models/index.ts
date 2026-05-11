@@ -111,8 +111,8 @@ export interface CreateSessionRequest {
 }
 
 export interface EditDelta {
-  userId: number;
-  changes: any[];
+  authorId: number;
+  content: string;
   timestamp: number;
 }
 

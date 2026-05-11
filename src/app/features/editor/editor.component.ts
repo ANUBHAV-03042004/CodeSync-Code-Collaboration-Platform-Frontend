@@ -11,6 +11,12 @@ import { AuthService } from '../../services/auth.service';
 import { CodeFile, ExecutionJob, CursorPosition, Snapshot, Comment } from '../../core/models';
 import { ToastService } from '../../shared/components/toast/toast.service';
 
+interface FileNode {
+  file: CodeFile;
+  children: FileNode[];
+  expanded: boolean;
+}
+
 @Component({
   selector: 'app-editor',
   standalone: true,
@@ -25,19 +31,33 @@ import { ToastService } from '../../shared/components/toast/toast.service';
         </div>
         <div class="sidebar-header">
           <span class="p-name" [title]="projectName">{{ projectName }}</span>
-          <button class="nb-icon-btn plus" (click)="showNewFileDialog = true" title="New file">+</button>
+          <div class="flex gap-8">
+            <button class="nb-icon-btn plus" (click)="showNewFolderDialog = true" title="New folder">📂</button>
+            <button class="nb-icon-btn plus" (click)="showNewFileDialog = true" title="New file">+</button>
+          </div>
         </div>
         <div class="file-scroller">
-          <div class="file-node"
-               *ngFor="let f of files"
-               [class.active]="f.fileId === activeFile?.fileId"
-               (click)="openFile(f)">
-            <span class="f-icon">{{ getFileIcon(f.language) }}</span>
-            <span class="f-name">{{ f.name }}</span>
-            <button class="delete-file-btn" (click)="deleteFile(f, $event)">✕</button>
-            <div class="active-indicator" *ngIf="f.fileId === activeFile?.fileId"></div>
-          </div>
-          <div class="empty-files" *ngIf="!files.length && !loading">
+          <ng-container *ngTemplateOutlet="nodeList; context: { $implicit: tree, depth: 0 }"></ng-container>
+
+          <ng-template #nodeList let-nodes let-depth="depth">
+            <div class="tree-node-wrapper" *ngFor="let n of nodes">
+              <div class="file-node"
+                   [class.active]="n.file.fileId === activeFile?.fileId"
+                   [class.folder]="n.file.folder"
+                   [style.padding-left.px]="12 + (depth * 16)"
+                   (click)="toggleNode(n, $event)">
+                <span class="f-icon">{{ n.file.folder ? (n.expanded ? '📂' : '📁') : getFileIcon(n.file.language) }}</span>
+                <span class="f-name">{{ n.file.name }}</span>
+                <button class="delete-file-btn" (click)="deleteFile(n.file, $event)">✕</button>
+                <div class="active-indicator" *ngIf="n.file.fileId === activeFile?.fileId"></div>
+              </div>
+              <div class="tree-children" *ngIf="n.file.folder && n.expanded">
+                <ng-container *ngTemplateOutlet="nodeList; context: { $implicit: n.children, depth: depth + 1 }"></ng-container>
+              </div>
+            </div>
+          </ng-template>
+
+          <div class="empty-files" *ngIf="!tree.length && !loading">
             <p>No files yet.</p>
           </div>
         </div>
@@ -182,12 +202,26 @@ import { ToastService } from '../../shared/components/toast/toast.service';
       <!-- New File Modal -->
       <div class="nb-modal-overlay" *ngIf="showNewFileDialog">
         <div class="nb-modal">
-          <div class="modal-hdr">NEW FILE</div>
+          <div class="modal-hdr">NEW FILE {{ activeFile?.folder ? 'IN ' + activeFile.name : '' }}</div>
           <div class="modal-body">
             <input [(ngModel)]="newFileName" placeholder="filename.js" class="nb-input w-full" (keydown.enter)="createFile()" #newFileInput />
             <div class="modal-actions mt-16">
               <button class="nb-btn-sm btn-white" (click)="showNewFileDialog = false">CANCEL</button>
               <button class="nb-btn-sm btn-yellow" (click)="createFile()">CREATE</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- New Folder Modal -->
+      <div class="nb-modal-overlay" *ngIf="showNewFolderDialog">
+        <div class="nb-modal">
+          <div class="modal-hdr">NEW FOLDER {{ activeFile?.folder ? 'IN ' + activeFile.name : '' }}</div>
+          <div class="modal-body">
+            <input [(ngModel)]="newFolderName" placeholder="folder-name" class="nb-input w-full" (keydown.enter)="createFolder()" #newFolderInput />
+            <div class="modal-actions mt-16">
+              <button class="nb-btn-sm btn-white" (click)="showNewFolderDialog = false">CANCEL</button>
+              <button class="nb-btn-sm btn-yellow" (click)="createFolder()">CREATE</button>
             </div>
           </div>
         </div>
@@ -206,11 +240,13 @@ import { ToastService } from '../../shared/components/toast/toast.service';
     .p-name { font-weight: 800; font-size: 13px; text-transform: uppercase; letter-spacing: 0.5px; overflow: hidden; text-overflow: ellipsis; color: var(--K); white-space: nowrap; max-width: 180px; }
     .plus { width: 32px; height: 32px; background: var(--W); border: 3px solid var(--K); font-weight: 800; cursor: pointer; box-shadow: 3px 3px 0 var(--K); display: flex; align-items: center; justify-content: center; font-size: 18px; }
     
-    .file-scroller { flex: 1; overflow-y: auto; padding: 12px; display: flex; flex-direction: column; gap: 6px; }
     .file-node { display: flex; align-items: center; gap: 12px; padding: 12px 16px; cursor: pointer; font-weight: 700; font-size: 14px; position: relative; border: 3px solid transparent; transition: all .15s; }
+    .file-node.folder { color: var(--B); }
     .file-node:hover .delete-file-btn { opacity: 1; }
     .delete-file-btn { position: absolute; right: 12px; opacity: 0; background: none; border: none; color: var(--R); font-size: 16px; cursor: pointer; transition: opacity .2s; }
     .delete-file-btn:hover { transform: scale(1.2); }
+
+    .tree-children { display: flex; flex-direction: column; }
 
     .last-edit-info { margin-left: 20px; font-size: 11px; color: #666; font-family: inherit; display: flex; align-items: center; gap: 4px; }
     .last-edit-info b { color: var(--K); }
@@ -326,8 +362,14 @@ export class EditorComponent implements OnInit, OnDestroy, AfterViewInit {
   snapshots: Snapshot[] = [];
   newComment = '';
   newFileName = '';
+  newFolderName = '';
+  showNewFolderDialog = false;
   remoteCursors = new Map<string, CursorPosition>();
   lastEditorName = 'Loading...';
+
+  // Tree management
+  tree: FileNode[] = [];
+  expandedNodes = new Set<number>();
 
   private subs: Subscription[] = [];
   private changeTimer: any;
@@ -356,7 +398,7 @@ export class EditorComponent implements OnInit, OnDestroy, AfterViewInit {
   private setupCollabListeners(): void {
     // 1. Edit Deltas
     this.subs.push(this.collabSvc.editDelta$.subscribe(delta => {
-      if (delta.authorId !== this.authSvc.currentUserValue?.userId) {
+      if (delta.authorId !== this.authSvc.getCurrentUser()?.userId) {
         // Simple overwrite for now. In a real app, use an OT/CRDT library like Yjs or Automerge.
         if (delta.content !== undefined) {
           this.editorContent = delta.content;
@@ -367,7 +409,7 @@ export class EditorComponent implements OnInit, OnDestroy, AfterViewInit {
 
     // 2. Cursor Positions
     this.subs.push(this.collabSvc.cursorPos$.subscribe(pos => {
-      if (pos.userId !== this.authSvc.currentUserValue?.userId) {
+      if (pos.userId !== this.authSvc.getCurrentUser()?.userId) {
         this.remoteCursors.set(pos.userId.toString(), pos);
       }
     }));
@@ -380,7 +422,7 @@ export class EditorComponent implements OnInit, OnDestroy, AfterViewInit {
         this.toast.info(`User ${event.userId} left the session`);
         this.remoteCursors.delete(event.userId.toString());
       } else if (event.type === 'SESSION_ENDED') {
-        this.toast.warning('The collaboration session has ended');
+        this.toast.warn('The collaboration session has ended');
         this.sessionId = null;
         this.remoteCursors.clear();
       }
@@ -399,8 +441,16 @@ export class EditorComponent implements OnInit, OnDestroy, AfterViewInit {
     this.loading = true;
     this.fileSvc.getTree(this.projectId).subscribe({
       next: files => {
-        this.files = files.filter(f => !f.deleted && !f.folder);
-        if (this.files.length && !this.activeFile) this.openFile(this.files[0]);
+        const activeId = this.activeFile?.fileId;
+        this.buildTree(files.filter(f => !f.deleted));
+        if (this.files.length && !this.activeFile) {
+          const firstFile = this.files.find(f => !f.folder);
+          if (firstFile) this.openFile(firstFile);
+        } else if (activeId) {
+          // Refresh active file reference
+          const refreshed = files.find(f => f.fileId === activeId);
+          if (refreshed) this.activeFile = refreshed;
+        }
         this.loading = false;
       },
       error: () => {
@@ -408,6 +458,62 @@ export class EditorComponent implements OnInit, OnDestroy, AfterViewInit {
         this.toast.error('Failed to load files');
       }
     });
+  }
+
+  private buildTree(files: CodeFile[]): void {
+    this.files = files; // keep flat list for easy access
+    const nodes = new Map<string, FileNode>();
+    
+    // Create nodes for all files/folders
+    files.forEach(f => {
+      nodes.set(f.path, { file: f, children: [], expanded: this.expandedNodes.has(f.fileId) });
+    });
+
+    const root: FileNode[] = [];
+    
+    files.sort((a,b) => a.path.split('/').length - b.path.split('/').length).forEach(f => {
+      const node = nodes.get(f.path)!;
+      const parts = f.path.split('/');
+      if (parts.length === 1) {
+        root.push(node);
+      } else {
+        const parentPath = parts.slice(0, -1).join('/');
+        const parent = nodes.get(parentPath);
+        if (parent) {
+          parent.children.push(node);
+        } else {
+          // Orphan or parent folder not created yet? Add to root.
+          root.push(node);
+        }
+      }
+    });
+
+    // Sort: folders first, then files alphabetically
+    const sortFn = (a: FileNode, b: FileNode) => {
+      if (a.file.folder && !b.file.folder) return -1;
+      if (!a.file.folder && b.file.folder) return 1;
+      return a.file.name.localeCompare(b.file.name);
+    };
+
+    const recursiveSort = (list: FileNode[]) => {
+      list.sort(sortFn);
+      list.forEach(n => recursiveSort(n.children));
+    };
+
+    recursiveSort(root);
+    this.tree = root;
+  }
+
+  toggleNode(node: FileNode, event: Event): void {
+    event.stopPropagation();
+    if (!node.file.folder) {
+      this.openFile(node.file);
+      return;
+    }
+    this.activeFile = node.file; // Set as active for creation context (e.g. create file in this folder)
+    node.expanded = !node.expanded;
+    if (node.expanded) this.expandedNodes.add(node.file.fileId);
+    else this.expandedNodes.delete(node.file.fileId);
   }
 
   ngAfterViewInit(): void {
@@ -420,6 +526,12 @@ export class EditorComponent implements OnInit, OnDestroy, AfterViewInit {
 
   openFile(file: CodeFile): void {
     this.activeFile = file;
+    if (file.folder) {
+      this.editorContent = '';
+      this.unsaved = false;
+      this.lastEditorName = 'N/A';
+      return;
+    }
     this.fileSvc.getContent(file.fileId).subscribe({
       next: r => {
         this.editorContent = r.content;
@@ -449,10 +561,17 @@ export class EditorComponent implements OnInit, OnDestroy, AfterViewInit {
 
   createFile(): void {
     if (!this.newFileName.trim()) return;
+    
+    // Determine path based on selected folder or root
+    let path = this.newFileName;
+    if (this.activeFile?.folder) {
+      path = `${this.activeFile.path}/${this.newFileName}`;
+    }
+
     this.fileSvc.createFile({
       projectId: this.projectId,
       name: this.newFileName,
-      path: this.newFileName,
+      path: path,
       language: this.detectLanguage(this.newFileName),
       content: ''
     }).subscribe({
@@ -467,6 +586,29 @@ export class EditorComponent implements OnInit, OnDestroy, AfterViewInit {
         console.error('File create error', err);
         this.toast.error(err.status === 400 ? 'File already exists or invalid name' : 'Failed to create file');
       }
+    });
+  }
+
+  createFolder(): void {
+    if (!this.newFolderName.trim()) return;
+
+    let path = this.newFolderName;
+    if (this.activeFile?.folder) {
+      path = `${this.activeFile.path}/${this.newFolderName}`;
+    }
+
+    this.fileSvc.createFolder({
+      projectId: this.projectId,
+      name: this.newFolderName,
+      path: path
+    }).subscribe({
+      next: () => {
+        this.toast.success('Folder created!');
+        this.showNewFolderDialog = false;
+        this.newFolderName = '';
+        this.loadFiles();
+      },
+      error: () => this.toast.error('Failed to create folder')
     });
   }
 
