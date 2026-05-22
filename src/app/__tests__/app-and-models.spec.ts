@@ -12,7 +12,7 @@ import {
 
 const createAuthMock = () => ({
   getCurrentUser: jest.fn().mockReturnValue({
-    userId: 1, username: 'alice', email: 'alice@test.com', role: 'USER',
+    userId: 1, username: 'alice', email: 'alice@test.com', role: 'DEVELOPER',
     fullName: 'Alice', avatarUrl: '', bio: '', provider: 'LOCAL', isActive: true, createdAt: ''
   }),
   logout: jest.fn().mockReturnValue(of({})),
@@ -67,11 +67,11 @@ describe('Model type shapes', () => {
   it('User should have required fields', () => {
     const u: User = {
       userId: 1, username: 'u', email: 'e@e.com', fullName: 'Full',
-      role: 'USER', avatarUrl: '', bio: '', provider: 'LOCAL',
+      role: 'DEVELOPER', avatarUrl: '', bio: '', provider: 'LOCAL',
       isActive: true, createdAt: '2024-01-01'
     };
     expect(u.userId).toBe(1);
-    expect(u.role).toBe('USER');
+    expect(u.role).toBe('DEVELOPER');
     expect(u.provider).toBe('LOCAL');
   });
 
