@@ -109,8 +109,22 @@ import { ToastService } from '../../../shared/components/toast/toast.service';
             <input type="text" formControlName="fullName" placeholder="Jane Doe" class="nb-input" />
           </div>
         </div>
+        <div class="field">
+          <label class="flbl">I am a...</label>
+          <div class="role-toggle">
+            <button type="button" class="role-btn" [class.active]="form.get('role')?.value === 'DEVELOPER'" (click)="setRole('DEVELOPER')">DEVELOPER</button>
+            <button type="button" class="role-btn" [class.active]="form.get('role')?.value === 'ADMINISTRATOR'" (click)="setRole('ADMINISTRATOR')">ADMINISTRATOR</button>
+          </div>
+        </div>
+        <div class="field" *ngIf="form.get('role')?.value === 'ADMINISTRATOR'">
+          <label class="flbl">Admin Secret Code <span class="req red">*</span></label>
+          <div class="input-wrap">
+            <span class="input-icon">🔑</span>
+            <input type="password" formControlName="adminSecret" placeholder="Enter secret code" class="nb-input" />
+          </div>
+        </div>
         <button type="button" class="nb-btn btn-blue next-btn" (click)="goNext(0)"
-          [disabled]="form.get('username')?.invalid">
+          [disabled]="form.get('username')?.invalid || (form.get('role')?.value === 'ADMINISTRATOR' && !form.get('adminSecret')?.value)">
           NEXT — CONTACT INFO →
         </button>
       </div>
@@ -171,6 +185,11 @@ import { ToastService } from '../../../shared/components/toast/toast.service';
           <div class="sum-row">
             <span class="sum-key">EMAIL</span>
             <span class="sum-val green-val">{{ form.value.email || '—' }}</span>
+          </div>
+          <div class="sum-divider"></div>
+          <div class="sum-row">
+            <span class="sum-key">ROLE</span>
+            <span class="sum-val yellow-val">{{ form.value.role }}</span>
           </div>
         </div>
 
@@ -442,7 +461,12 @@ import { ToastService } from '../../../shared/components/toast/toast.service';
     .red-val   { color: #E53935; }
     .blue-val  { color: #1E88E5; }
     .green-val { color: #43A047; }
+    .yellow-val { color: #FDD835; background: #000; padding: 2px 6px; }
     .sum-divider { height: 1px; background: #ddd; margin: 4px 0; }
+    
+    .role-toggle { display: flex; gap: 10px; }
+    .role-btn { flex: 1; padding: 10px; border: 3px solid #000; background: #fff; font-family: 'Bebas Neue', sans-serif; font-size: 18px; letter-spacing: 1px; cursor: pointer; transition: all 0.2s; }
+    .role-btn.active { background: #000; color: #FDD835; box-shadow: 4px 4px 0 #FDD835; }
 
     /* ── Buttons ───────────────────────────────────────────────────────────── */
     .nb-btn {
@@ -584,7 +608,9 @@ export class RegisterComponent implements OnInit, AfterViewInit {
       username: ['', [Validators.required, Validators.minLength(3), Validators.maxLength(30)]],
       fullName: [''],
       email:    ['', [Validators.required, Validators.email]],
-      password: ['', [Validators.required, Validators.minLength(8)]]
+      password: ['', [Validators.required, Validators.minLength(8)]],
+      role:     ['DEVELOPER'],
+      adminSecret: ['']
     });
     this.form.get('password')?.valueChanges.subscribe(v => this.updateStrength(v));
   }
@@ -619,6 +645,13 @@ export class RegisterComponent implements OnInit, AfterViewInit {
     return !!(c?.invalid && c?.touched);
   }
 
+  setRole(role: string): void {
+    this.form.patchValue({ role });
+    if (role !== 'ADMINISTRATOR') {
+      this.form.patchValue({ adminSecret: '' });
+    }
+  }
+
   stepDone(step: number): boolean { return this.currentStep > step; }
 
   goNext(step: number): void {
@@ -647,8 +680,8 @@ export class RegisterComponent implements OnInit, AfterViewInit {
   onSubmit(): void {
     if (this.form.invalid) { this.form.markAllAsTouched(); return; }
     this.loading = true;
-    const { username, email, password, fullName } = this.form.value;
-    this.auth.register(username, email, password, fullName).subscribe({
+    const { username, email, password, fullName, role, adminSecret } = this.form.value;
+    this.auth.register(username, email, password, fullName, role, adminSecret).subscribe({
       next: (res: any) => {
         const msg = res.message || 'Registration successful! Please check your email.';
         this.ngZone.run(() => {

@@ -45,6 +45,9 @@ import { ToastService } from '../../../shared/components/toast/toast.service';
             <button type="submit" class="btn btn-K" [disabled]="loading" style="width:100%;padding:15px;font-size:14px">
               {{ loading ? 'Signing in…' : 'Sign In →' }}
             </button>
+            <button type="button" class="btn btn-G" (click)="onGuestLogin()" [disabled]="loading" style="width:100%;padding:15px;font-size:14px">
+              {{ loading ? 'Starting session…' : 'Continue as Guest 👤' }}
+            </button>
           </form>
           <div class="divline"><span>or</span></div>
           <div class="oauth-row" #oauthRow>
@@ -92,6 +95,7 @@ import { ToastService } from '../../../shared/components/toast/toast.service';
     .btn:disabled { opacity:.55;cursor:not-allowed; }
     .btn-K { background:#0A0A0A;color:var(--W); }
     .btn-R { background:var(--R);color:var(--W); }
+    .btn-G { background:var(--G);color:var(--W); }
     .divline { display:flex;align-items:center;gap:10px;font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:#aaa;margin:8px 0; }
     .divline::before,.divline::after { content:'';flex:1;height:2px;background:#0A0A0A; }
     .oauth-row { display:flex;gap:12px; }
@@ -164,6 +168,20 @@ export class LoginComponent implements OnInit, AfterViewInit {
         this.loading = false;
         this.toast.error(err.error?.message || 'Invalid credentials');
         gsap.fromTo(this.formBoxRef.nativeElement, { x:-10 }, { x:0, duration:.4, ease:'elastic.out(1,.3)' });
+      }
+    });
+  }
+
+  onGuestLogin(): void {
+    this.loading = true;
+    this.auth.guestLogin().subscribe({
+      next: () => {
+        gsap.to(this.formBoxRef.nativeElement, { opacity:0, y:-30, duration:.4, ease:'power2.in',
+          onComplete: () => this.router.navigate(['/dashboard']) });
+      },
+      error: (err) => {
+        this.loading = false;
+        this.toast.error(err.error?.message || 'Could not start guest session');
       }
     });
   }

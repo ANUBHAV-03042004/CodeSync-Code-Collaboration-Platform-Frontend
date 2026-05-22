@@ -38,8 +38,9 @@ import { User } from '../../core/models';
         <input [(ngModel)]="search" (input)="applyFilters()" placeholder="Search by name, email, username…" class="search-input" />
         <select [(ngModel)]="filterRole" (change)="applyFilters()" class="filter-select">
           <option value="">All roles</option>
-          <option value="USER">USER</option>
-          <option value="ADMIN">ADMIN</option>
+          <option value="GUEST">GUEST</option>
+          <option value="DEVELOPER">DEVELOPER</option>
+          <option value="ADMINISTRATOR">ADMINISTRATOR</option>
         </select>
         <select [(ngModel)]="filterStatus" (change)="applyFilters()" class="filter-select">
           <option value="">All status</option>
@@ -77,7 +78,7 @@ import { User } from '../../core/models';
               </td>
               <td class="email-cell">{{ u.email }}</td>
               <td>
-                <span class="role-badge" [class.admin]="u.role === 'ADMIN'">{{ u.role }}</span>
+                <span class="role-badge" [class.admin]="u.role === 'ADMINISTRATOR'">{{ u.role }}</span>
               </td>
               <td>
                 <span class="provider-badge">{{ u.provider }}</span>

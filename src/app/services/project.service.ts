@@ -3,6 +3,8 @@ import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { environment } from '../../environments/environment';
 import { Project, CreateProjectRequest, UpdateProjectRequest } from '../core/models';
+// ProjectService: Angular service executing workspace project creation, stargazing, forking, and sharing.
+//
 
 @Injectable({ providedIn: 'root' })
 export class ProjectService {

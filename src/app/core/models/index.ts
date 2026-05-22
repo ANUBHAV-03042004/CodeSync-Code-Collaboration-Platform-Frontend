@@ -4,7 +4,7 @@ export interface User {
   username: string;
   email: string;
   fullName: string;
-  role: 'USER' | 'ADMIN';
+  role: 'GUEST' | 'DEVELOPER' | 'ADMINISTRATOR';
   avatarUrl: string;
   bio: string;
   provider: 'LOCAL' | 'GITHUB' | 'GOOGLE';

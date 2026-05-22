@@ -1,5 +1,7 @@
 import { Injectable } from '@angular/core';
 import { Subject } from 'rxjs';
+// ToastService: Angular service dispatching reactive pop-up notification messages to the UI.
+//
 
 export interface Toast { message: string; type: 'success' | 'error' | 'info' | 'warn'; }
 

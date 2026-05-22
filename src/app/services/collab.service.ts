@@ -7,6 +7,8 @@ import { CreateSessionRequest, EditDelta, CursorPosition } from '../core/models'
 import { AuthService } from './auth.service';
 
 const WS_NAME = 'collab';
+// CollabService: Angular service handling real-time editing coordination, locks, and text sync.
+//
 
 @Injectable({ providedIn: 'root' })
 export class CollabService {
@@ -18,7 +20,6 @@ export class CollabService {
   cursorPos$ = new Subject<CursorPosition>();
   sessionEvent$ = new Subject<any>();
 
-  // ── REST ──────────────────────────────────────────────────────────────────
   createSession(req: CreateSessionRequest): Observable<{ sessionId: string }> {
     return this.http.post<{ sessionId: string }>(this.base, req);
   }
@@ -47,28 +48,21 @@ export class CollabService {
     return this.http.get<{ active: boolean }>(`${this.base}/${sessionId}/active`);
   }
 
-  // ── WebSocket ─────────────────────────────────────────────────────────────
   connectToSession(sessionId: string): Subject<boolean> {
     const status$ = this.ws.connect(WS_NAME, environment.wsCollabEndpoint);
 
-    // IMPORTANT: Wait for STOMP connection before subscribing.
-    // Previously subscriptions fired immediately and were silently dropped
-    // because client.connected was still false.
     status$.subscribe(connected => {
       if (connected) {
         console.log('[CollabService] STOMP connected, subscribing to session', sessionId);
 
-        // Subscribe to edit deltas
         this.ws.subscribe(WS_NAME, `/topic/session.${sessionId}.edit`, msg => {
           this.editDelta$.next(JSON.parse(msg.body));
         });
 
-        // Subscribe to cursor positions
         this.ws.subscribe(WS_NAME, `/topic/session.${sessionId}.cursor`, msg => {
           this.cursorPos$.next(JSON.parse(msg.body));
         });
 
-        // Subscribe to session events (join/leave/kick/end)
         this.ws.subscribe(WS_NAME, `/topic/session.${sessionId}.events`, msg => {
           this.sessionEvent$.next(JSON.parse(msg.body));
         });
