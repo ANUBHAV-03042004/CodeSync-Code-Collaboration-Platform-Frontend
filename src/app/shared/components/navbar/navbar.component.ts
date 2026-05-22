@@ -206,7 +206,7 @@ export class NavbarComponent implements OnInit, OnDestroy, AfterViewInit {
   mobileMenuOpen = false;
   avatarColor = '#1A6FFF';
   private subs: Subscription[] = [];
-  get isAdmin(): boolean { return this.user?.role === 'ADMIN'; }
+  get isAdmin(): boolean { return this.user?.role === 'ADMINISTRATOR'; }
 
   @HostListener('document:click')
   onDocClick(): void { this.notifMenuOpen = false; this.userMenuOpen = false; this.mobileMenuOpen = false; }

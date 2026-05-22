@@ -8,11 +8,11 @@ import { User } from '../core/models';
 
 const mockUser: User = {
   userId: 1, username: 'alice', email: 'alice@test.com', fullName: 'Alice',
-  role: 'USER', avatarUrl: '', bio: '', provider: 'LOCAL',
+  role: 'DEVELOPER', avatarUrl: '', bio: '', provider: 'LOCAL',
   isActive: true, createdAt: ''
 };
 
-const adminUser: User = { ...mockUser, role: 'ADMIN' };
+const adminUser: User = { ...mockUser, role: 'ADMINISTRATOR' };
 
 const makeAuthSvc = (user: User = mockUser) => ({
   getCurrentUser: jest.fn().mockReturnValue(user),
@@ -57,7 +57,7 @@ describe('NavbarComponent', () => {
   it('should load current user on init', () => expect(component.user?.username).toBe('alice'));
   it('should load badge count on init', () => expect(component.unreadCount).toBe(3));
   it('should connect push notifications', () => expect(notifSvc.connectPush).toHaveBeenCalled());
-  it('should set isAdmin false for USER', () => expect(component.isAdmin).toBe(false));
+  it('should set isAdmin false for DEVELOPER', () => expect(component.isAdmin).toBe(false));
 
   it('should toggle notification menu', () => {
     expect(component.notifMenuOpen).toBe(false);
@@ -126,5 +126,5 @@ describe('NavbarComponent – Admin', () => {
     fixture.detectChanges();
   });
 
-  it('should set isAdmin true for ADMIN role', () => expect(component.isAdmin).toBe(true));
+  it('should set isAdmin true for ADMINISTRATOR role', () => expect(component.isAdmin).toBe(true));
 });
