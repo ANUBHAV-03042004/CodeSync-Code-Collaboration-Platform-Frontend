@@ -3,6 +3,8 @@ import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { environment } from '../../environments/environment';
 import { CodeFile, CreateFileRequest, CreateFolderRequest } from '../core/models';
+// FileService: Angular service orchestrating project file uploads, updates, deletions, and directory structures.
+//
 
 @Injectable({ providedIn: 'root' })
 export class FileService {

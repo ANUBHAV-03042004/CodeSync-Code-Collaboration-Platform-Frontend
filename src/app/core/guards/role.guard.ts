@@ -17,7 +17,7 @@ export const roleGuard: CanActivateFn = () => {
 
   const payload = decodeJwtPayload(token);
   const role: string = payload?.role || payload?.roles?.[0] || '';
-  if (!role.includes('ADMIN')) {
+  if (role !== 'ADMINISTRATOR' && !role.includes('ADMIN')) {
     router.navigate(['/dashboard']);
     return false;
   }
