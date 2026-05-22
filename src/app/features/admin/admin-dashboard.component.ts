@@ -118,7 +118,8 @@ import { User } from '../../core/models';
               <td>
                 <div class="action-btns">
                   <button class="btn-neo btn-react" *ngIf="!u.isActive" (click)="reactivate(u.userId)">↻ Reactivate</button>
-                  <button class="btn-neo btn-del" (click)="confirmDelete(u)">✕ Delete</button>
+                  <button class="btn-neo btn-del" *ngIf="u.role !== 'ADMINISTRATOR'" (click)="confirmDelete(u)">✕ Delete</button>
+                  <span class="admin-protected" *ngIf="u.role === 'ADMINISTRATOR'">🔒</span>
                 </div>
               </td>
             </tr>
@@ -225,6 +226,7 @@ import { User } from '../../core/models';
     .btn-neo:active { transform: translate(1px, 1px); box-shadow: 1px 1px 0 var(--K); }
     .btn-react { background: var(--G); color: var(--K); }
     .btn-del { background: var(--R); color: var(--W); }
+    .admin-protected { font-size: 18px; display: inline-flex; align-items: center; justify-content: center; opacity: 0.5; cursor: default; title: 'Protected'; }
 
     /* ===== EMPTY STATE ===== */
     .empty-row { text-align: center; padding: 60px 20px !important; background: var(--O) !important; }
