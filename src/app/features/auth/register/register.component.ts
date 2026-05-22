@@ -65,6 +65,13 @@ import { ToastService } from '../../../shared/components/toast/toast.service';
         </svg>
         <span>CONTINUE WITH GITHUB</span>
       </button>
+      <button type="button" class="oauth-btn oauth-guest" (click)="guestLogin()" [disabled]="loading">
+        <svg class="oauth-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" xmlns="http://www.w3.org/2000/svg">
+          <circle cx="12" cy="8" r="4"></circle>
+          <path d="M4 20c0-4 4-8 8-8s8 4 8 8"></path>
+        </svg>
+        <span>CONTINUE AS GUEST</span>
+      </button>
       <div class="oauth-divider">
         <div class="div-line"></div>
         <span class="div-text">OR REGISTER WITH EMAIL</span>
@@ -528,6 +535,8 @@ import { ToastService } from '../../../shared/components/toast/toast.service';
     .oauth-btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; box-shadow: 4px 4px 0 #000; }
     .oauth-google { background: #fff; color: #000; }
     .oauth-github { background: #000; color: #fff; }
+    .oauth-guest  { background: #FAFAFA; color: #555; border-color: #555; }
+    .oauth-guest:hover { box-shadow: 6px 6px 0 #555; }
     .oauth-icon { width: 20px; height: 20px; flex-shrink: 0; }
     .oauth-divider {
       display: flex;
@@ -639,6 +648,16 @@ export class RegisterComponent implements OnInit, AfterViewInit {
 
   loginWithGoogle(): void { this.auth.loginWithGoogle(); }
   loginWithGithub(): void { this.auth.loginWithGithub(); }
+  guestLogin(): void {
+    this.loading = true;
+    this.auth.guestLogin().subscribe({
+      next: () => this.ngZone.run(() => this.router.navigate(['/dashboard'])),
+      error: () => {
+        this.loading = false;
+        this.toast.error('Failed to log in as guest');
+      }
+    });
+  }
 
   touched(field: string): boolean {
     const c = this.form.get(field);
